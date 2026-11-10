@@ -32,7 +32,7 @@ Every box you type in is saved to MongoDB automatically.
   Pay = salary ÷ days in month × days present (half day = 0.5). Type any Advance taken and the amount Paid; "To pay" shows what is left.
 - **Today** tab: pick a date, type Morning / Evening / Paneer for each customer. "Copy yesterday" fills empty boxes.
 - **Month Sheet** tab: the full Excel-style grid. Arrow keys / Enter move between boxes. Search by name.
-  Edit Rate, Prev bal, Paid and Paneer date on the right. "Bill" prints a customer's monthly bill.
+  Edit Rate, Prev bal, Paid and Paneer date on the right. "Bill" opens a detailed monthly customer invoice with date-wise milk and paneer quantities, daily amounts, previous balance, paid amount and balance. Download it as PDF or PNG image, print it, or share the image using your phone share menu / WhatsApp. PDF and image export use browser-loaded html2canvas and jsPDF libraries (internet connection required).
 - **Customers** tab: add / edit / delete customers, change paneer rate (₹500/kg) and business name.
 - **New month**: change the month at the top, then press "Carry last month's balance" on the Month Sheet.
 - **Download Excel (CSV)** exports the month.

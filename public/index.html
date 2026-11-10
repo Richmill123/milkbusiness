@@ -47,8 +47,7 @@ table.c{width:100%;border-collapse:collapse}.c td,.c th{padding:5px;border-botto
 .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px}table.k{width:100%;border-collapse:collapse;font-size:13px}.k td,.k th{padding:7px 6px;border-bottom:1px solid #eef1f3;text-align:right}.k td:first-child,.k th:first-child{text-align:left}.k th{font-size:11px;color:var(--mut);text-transform:uppercase}
 .ab{width:36px;height:30px;border:1px solid var(--ln);border-radius:6px;background:#fff;font:700 12px inherit;cursor:pointer;color:#aab}.ab.P{background:#d8f0e4;color:#0a6b3e;border-color:#8fcfae}.ab.H{background:#fff0c9;color:#8a5a00;border-color:#e8c872}.ab.A{background:#fbdcd8;color:var(--bad);border-color:#e9a29b}
 /* bill */
-#bill{position:fixed;inset:0;background:#fff;z-index:100;overflow:auto;padding:16px}.bill{max-width:760px;margin:0 auto;border:1px solid #888;padding:16px}
-.bill table{border-collapse:collapse;width:100%;margin:8px 0}.bill td,.bill th{border:1px solid #888;padding:3px;text-align:center;font-size:12px}
+#bill{position:fixed;inset:0;background:#fff;z-index:100;overflow:auto;padding:16px}.bill{max-width:760px;margin:0 auto;border:1px solid #d9e0e6;border-radius:12px;padding:20px;color:#17202a;background:#fff}.bill .bill-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;border-bottom:2px solid #0f6b4f;padding-bottom:12px;margin-bottom:14px}.bill .bill-meta{color:#667;font-size:13px}.bill table{border-collapse:collapse;width:100%;margin:10px 0}.bill td,.bill th{border:1px solid #d9e0e6;padding:6px;text-align:center;font-size:12px}.bill th{background:#eef3f1;color:#0a4f3a}.bill .bill-totals{max-width:420px;margin-left:auto}.bill .bill-totals td:first-child{text-align:left}.bill .bill-grand{font-size:16px;font-weight:800;background:#e6f2ed}.bill .bill-foot{margin-top:18px;text-align:center;color:#667;font-size:12px}
 @media print{body>*:not(#bill){display:none!important}#bill{position:static;padding:0}.noprint{display:none}.bill{border:0}}
 </style></head><body>
 <header><b id="biz">Milk Register</b><span id="stat"></span><input type="month" id="mon"></header>
@@ -70,6 +69,8 @@ table.c{width:100%;border-collapse:collapse}.c td,.c th{padding:5px;border-botto
  <section id="v-cust" class="hide"><div id="custBox"></div></section>
 </main>
 <div id="bill" class="hide"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
 <script>
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -251,15 +252,95 @@ $('#day').onchange=e=>setDay(e.target.value);
 $('#mon').onchange=e=>{if(!e.target.value)return;load(e.target.value);$('#day').value=e.target.value+'-01'};
 
 /* ---------- bill & CSV ---------- */
-function bill(id){const c=S.by[id],k=calc(c),n=dim(),s=S.sh[id]||{days:{}};let rows='';
- for(let a=1;a<=n;a+=8){let r1='',r2='';for(let d=a;d<a+8;d++){r1+=`<th>${d<=n?d:''}</th>`;const x=s.days[d]||{};r2+=`<td>${d<=n?(fmt(num(x.m)+num(x.e))||'–')+(x.p?` <small>+${x.p}kg P</small>`:''):''}</td>`}rows+=`<tr>${r1}</tr><tr>${r2}</tr>`}
- $('#bill').innerHTML=`<div class="noprint" style="margin-bottom:10px"><button class="b" onclick="print()">Print / Save PDF</button> <button class="b o" onclick="$('#bill').classList.add('hide')">Close</button></div>
- <div class="bill"><h2 style="text-align:center;margin:0">${esc(S.set.bizName||'Milk Supply')}</h2><p style="text-align:center;margin:2px 0 10px"><b>MONTHLY BILL – ${S.ym}</b></p>
- <p><b>${esc(c.name)}</b> ${c.mobile?'· '+esc(c.mobile):''} · ${esc(c.area)}</p><table>${rows}</table><p class="muted">Litres per day (morning + evening). “–” = no delivery.</p>
- <table style="text-align:left"><tr><td>Total milk</td><td>${fmt(k.l)} L × ₹${k.rate}</td><td>${money(k.milk)||'₹0'}</td></tr>
- ${k.kg?`<tr><td>Paneer</td><td>${fmt(k.kg)} kg × ₹${S.set.paneerRate}</td><td>${money(k.pan)}</td></tr>`:''}
- <tr><td>Previous balance</td><td></td><td>${money(k.prev)||'₹0'}</td></tr><tr><td>Paid</td><td></td><td>${money(k.paid)||'₹0'}</td></tr>
- <tr><td><b>BALANCE TO PAY</b></td><td></td><td><b>${money(k.bal)||'₹0'}</b></td></tr></table></div>`;$('#bill').classList.remove('hide')}
+let currentInvoiceId=null;
+function bill(id){
+ currentInvoiceId=id;
+ const c=S.by[id],k=calc(c),n=dim(),s=S.sh[id]||{days:{}};
+ const monthName=new Date(Number(S.ym.slice(0,4)),Number(S.ym.slice(5,7))-1,1).toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+ let rows='',hasPaneer=false;
+ for(let d=1;d<=n;d++){
+  const x=s.days?.[d]||{},litres=num(x.m)+num(x.e),paneer=num(x.p);
+  if(paneer)hasPaneer=true;
+  const milkAmount=litres*k.rate,paneerAmount=paneer*S.set.paneerRate;
+  rows+=`<tr><td>${pad(d)} ${esc(monthName.split(' ')[0].slice(0,3))}</td><td>${litres?fmt(litres):'–'}</td><td>${paneer?fmt(paneer):'–'}</td><td>${money(milkAmount)||'₹0'}</td><td>${money(paneerAmount)||'₹0'}</td><td><b>${money(milkAmount+paneerAmount)||'₹0'}</b></td></tr>`;
+ }
+ const invoiceNo=`${S.ym.replace('-','')}-${String(c._id).slice(0,6).toUpperCase()}`;
+ $('#bill').innerHTML=`<div class="noprint" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 auto 12px;max-width:760px">
+  <button class="b" onclick="downloadInvoicePDF()">Download PDF</button>
+  <button class="b o" onclick="downloadInvoiceImage()">Download Image</button>
+  <button class="b o" onclick="shareInvoice()">Share</button>
+  <button class="b o" onclick="print()">Print</button>
+  <button class="b o" onclick="$('#bill').classList.add('hide')">Close</button>
+ </div>
+ <div class="bill" id="invoiceContent">
+  <div class="bill-head"><div><h2 style="margin:0;color:#0a4f3a">${esc(S.set.bizName||'Milk Supply')}</h2><div class="bill-meta">Monthly customer invoice</div></div>
+   <div style="text-align:right"><b>INVOICE</b><div class="bill-meta">No: ${invoiceNo}</div><div class="bill-meta">${esc(monthName)}</div></div></div>
+  <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+   <div><div class="bill-meta">BILL TO</div><b>${esc(c.name)}</b><div class="bill-meta">${esc(c.mobile||'')}${c.area?' · '+esc(c.area):''}</div></div>
+   <div style="text-align:right"><div class="bill-meta">BILLING PERIOD</div><b>${esc(monthName)}</b></div>
+  </div>
+  <h3 style="margin:18px 0 6px;color:#0a4f3a;font-size:14px">Daily supply details</h3>
+  <table><thead><tr><th>Date</th><th>Milk (L)</th><th>Paneer (kg)</th><th>Milk amount</th><th>Paneer amount</th><th>Daily total</th></tr></thead><tbody>${rows}</tbody></table>
+  <div class="bill-meta">Milk rate: ${money(k.rate)}/L · Paneer rate: ${money(S.set.paneerRate)}/kg</div>
+  <table class="bill-totals">
+   <tr><td>Total milk</td><td>${fmt(k.l)} L</td><td>${money(k.milk)||'₹0'}</td></tr>
+   <tr><td>Paneer supplied</td><td>${fmt(k.kg)} kg</td><td>${money(k.pan)||'₹0'}</td></tr>
+   <tr><td>Current month supply</td><td></td><td>${money(k.milk+k.pan)||'₹0'}</td></tr>
+   <tr><td>Previous balance</td><td></td><td>${money(k.prev)||'₹0'}</td></tr>
+   <tr><td><b>Total amount</b></td><td></td><td><b>${money(k.due)||'₹0'}</b></td></tr>
+   <tr><td>Amount paid</td><td></td><td>${money(k.paid)||'₹0'}</td></tr>
+   <tr class="bill-grand"><td>BALANCE TO PAY</td><td></td><td>${money(k.bal)||'₹0'}</td></tr>
+  </table>
+  <div class="bill-foot">Thank you for your business!</div>
+ </div>`;
+ $('#bill').classList.remove('hide');
+}
+async function invoiceCanvas(){
+ const el=$('#invoiceContent');
+ if(!el)throw new Error('Open a customer invoice first.');
+ if(typeof html2canvas!=='function')throw new Error('Invoice image library did not load. Check your internet connection and refresh.');
+ return html2canvas(el,{scale:2,backgroundColor:'#ffffff',useCORS:true});
+}
+function invoiceFileName(ext){
+ const name=(S.by[currentInvoiceId]?.name||'customer').trim().replace(/[^a-z0-9-_]+/gi,'-').toLowerCase();
+ return `invoice-${name}-${S.ym}.${ext}`;
+}
+async function downloadInvoiceImage(){
+ try{const canvas=await invoiceCanvas(),a=document.createElement('a');a.download=invoiceFileName('png');a.href=canvas.toDataURL('image/png');a.click()}
+ catch(e){alert('Could not create invoice image: '+e.message)}
+}
+async function downloadInvoicePDF(){
+ try{
+  const canvas=await invoiceCanvas();
+  if(!window.jspdf?.jsPDF)throw new Error('PDF library did not load. Check your internet connection and refresh.');
+  const {jsPDF}=window.jspdf,pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const pageW=210,pageH=297,margin=8,usableW=pageW-margin*2,usableH=pageH-margin*2;
+  const pxPerPage=canvas.width*(usableH/usableW);
+  let y=0,page=0;
+  while(y<canvas.height){
+   const sliceH=Math.min(pxPerPage,canvas.height-y),part=document.createElement('canvas');
+   part.width=canvas.width;part.height=sliceH;
+   part.getContext('2d').drawImage(canvas,0,y,canvas.width,sliceH,0,0,canvas.width,sliceH);
+   if(page)pdf.addPage();
+   const h=sliceH*(usableW/canvas.width);
+   pdf.addImage(part.toDataURL('image/png'),'PNG',margin,margin,usableW,h);
+   y+=sliceH;page++;
+  }
+  pdf.save(invoiceFileName('pdf'));
+ }catch(e){alert('Could not create PDF: '+e.message)}
+}
+async function shareInvoice(){
+ try{
+  const canvas=await invoiceCanvas();
+  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+  if(!blob)throw new Error('Could not prepare invoice image.');
+  const file=new File([blob],invoiceFileName('png'),{type:'image/png'});
+  const customer=S.by[currentInvoiceId],summary=customer?calc(customer):null;
+  const textMsg=`Monthly invoice for ${customer?.name||'customer'} – ${S.ym}. Total: ${money(summary?.due||0)}; paid: ${money(summary?.paid||0)}; balance: ${money(summary?.bal||0)}.`;
+  if(navigator.canShare?.({files:[file]})&&navigator.share){await navigator.share({files:[file],title:'Monthly milk invoice',text:textMsg})}
+  else{const a=document.createElement('a');a.download=file.name;a.href=URL.createObjectURL(blob);a.click();window.open('https://wa.me/?text='+encodeURIComponent(textMsg+' Please find the invoice image downloaded on your device.'),'_blank')}
+ }catch(e){if(e.name!=='AbortError')alert('Could not share invoice: '+e.message)}
+}
 function csv(){const n=dim(),H=['Area','Name','Mobile'];for(let d=1;d<=n;d++)H.push(d+'/M',d+'/E',d+'/P');H.push('Litres','Rate','Milk Amount','Prev Balance','Paneer Amount','Total Due','Paid','Balance','Paneer Date');
  const R=[H];for(const c of S.cust){const k=calc(c),r=[c.area,c.name,c.mobile];for(let d=1;d<=n;d++)['m','e','p'].forEach(f=>r.push(g(c._id,d,f)??''));R.push(r.concat([k.l,k.rate,k.milk,k.prev,k.pan,k.due,k.paid,k.bal,k.pd]))}
  const t='\ufeff'+R.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n'),a=document.createElement('a');
