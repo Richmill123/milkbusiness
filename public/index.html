@@ -91,8 +91,8 @@ async function run(p){stat('Saving…');try{await p;stat('Saved ✓')}catch(e){s
 async function load(ym){if(hasPending()&&!confirm('There are unsaved changes. Discard them and switch month?'))return;const[d,st]=await Promise.all([api('GET','/api/month/'+ym),api('GET','/api/staff/'+ym)]);S.ym=ym;S.emp=st.employees;S.att=Object.fromEntries(st.att.map(a=>[a.eid,a]));S.cust=d.customers;S.by=Object.fromEntries(d.customers.map(c=>[c._id,c]));
  S.sh=Object.fromEntries(d.sheets.map(s=>[s.cid,s]));S.set=d.settings;$('#mon').value=ym;
  $('#biz').textContent=S.set.bizName||'Milk Register';render()}
-const g=(id,d,f)=>S.sh[id]?.days?.[d]?.[f];
-function calc(c){const s=S.sh[c._id]||{};let l=0,kg=0;for(const d in s.days||{}){const x=s.days[d];l+=num(x.m)+num(x.e);kg+=num(x.p)}
+const g=(id,d,f)=>{const v=S.sh[id]?.days?.[d]?.[f];return v!==undefined?v:(f==='m'?(Number(S.by[id]?.dailyMilkLitres)||0):undefined)};
+function calc(c){const s=S.sh[c._id]||{};let l=0,kg=0;for(let d=1;d<=dim();d++){l+=num(g(c._id,d,'m'))+num(g(c._id,d,'e'));kg+=num(g(c._id,d,'p'))}
  const rate=s.rate??c.rate??0,milk=l*rate,pan=kg*S.set.paneerRate,prev=num(s.prev),paid=num(s.paid),due=milk+prev+pan;
  return{l,kg,rate,milk,pan,prev,paid,due,bal:due-paid,pd:s.pdate||''}}
 function groups(){S.areas=[];const m={};for(const c of S.cust){const a=c.area||'Other';if(!m[a]){m[a]=[];S.areas.push(a)}m[a].push(c)}return S.areas.map(a=>[a,m[a]])}
@@ -137,7 +137,7 @@ function refresh(){const cc={},C=c=>cc[c._id]||(cc[c._id]=calc(c)),D=+($('#day')
 document.addEventListener('change',e=>{const i=e.target;
  if(i.dataset.k){const[id,d,f]=i.dataset.k.split('|');cell(id,+d,f,i.value.trim());i.classList.toggle('has',i.value!=='');refresh()}
  else if(i.dataset.s){const[id,f]=i.dataset.s.split('|');field(id,f,i.value.trim());refresh()}
- else if(i.dataset.c){const[id,f]=i.dataset.c.split('|'),c=S.by[id];c[f]=f==='rate'?+i.value||0:i.value.trim();const old=pending.customers.find(x=>x.id===id);if(old)old.body[f]=c[f];else pending.customers.push({id,body:{[f]:c[f]}});markPending()}
+ else if(i.dataset.c){const[id,f]=i.dataset.c.split('|'),c=S.by[id];c[f]=['rate','dailyMilkLitres'].includes(f)?(+i.value||0):i.value.trim();const old=pending.customers.find(x=>x.id===id);if(old)old.body[f]=c[f];else pending.customers.push({id,body:{[f]:c[f]}});markPending()}
  else if(i.dataset.e){const[id,f]=i.dataset.e.split('|'),e=S.emp.find(x=>x._id===id);e[f]=f==='salary'?+i.value||0:i.value.trim();const old=pending.employees.find(x=>x.id===id);if(old)old.body[f]=e[f];else pending.employees.push({id,body:{[f]:e[f]}});markPending();rStaff()}
  else if(i.dataset.af){const[id,f]=i.dataset.af.split('|'),a=attOf(id);if(i.value.trim()===''||isNaN(i.value))delete a[f];else a[f]=+i.value;pending.attFields=pending.attFields.filter(x=>!(x.eid===id&&x.f===f));pending.attFields.push({month:S.ym,eid:id,f,v:i.value.trim()});markPending();rStaff()}
  else if(i.dataset.set){S.set[i.dataset.set]=i.dataset.set==='paneerRate'?+i.value||0:i.value;$('#biz').textContent=S.set.bizName||'Milk Register';const setting=pending.settings[0]||(pending.settings[0]={});setting[i.dataset.set]=S.set[i.dataset.set];markPending();refresh()}});
@@ -179,16 +179,16 @@ function rCust(){const areas=[...new Set(S.cust.map(c=>c.area).filter(Boolean))]
  let h=`<datalist id="al">${areas.map(a=>`<option value="${esc(a)}">`).join('')}</datalist>
  <div class="card"><h3>Add customer</h3><div style="padding:10px;display:flex;gap:8px;flex-wrap:wrap">
   <input id="na" placeholder="Name *" style="flex:2;min-width:140px;padding:9px;border:1.5px solid var(--ln);border-radius:8px"><input id="nm2" placeholder="Mobile" inputmode="tel" style="flex:1;min-width:110px;padding:9px;border:1.5px solid var(--ln);border-radius:8px">
-  <input id="nar" list="al" placeholder="Area / route" style="flex:1;min-width:110px;padding:9px;border:1.5px solid var(--ln);border-radius:8px"><input id="nr" value="60" inputmode="decimal" style="width:70px;padding:9px;border:1.5px solid var(--ln);border-radius:8px">
+  <input id="nar" list="al" placeholder="Area / route" style="flex:1;min-width:110px;padding:9px;border:1.5px solid var(--ln);border-radius:8px"><input id="ndl" type="number" min="0" step="0.1" placeholder="Daily L" title="Default milk litres per day" style="width:85px;padding:9px;border:1.5px solid var(--ln);border-radius:8px"><input id="nr" value="60" inputmode="decimal" style="width:70px;padding:9px;border:1.5px solid var(--ln);border-radius:8px">
   <button class="b" onclick="addCust()">+ Add</button></div></div>
  <div class="card"><h3>Settings</h3><div style="padding:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
   <label class="muted">Business name <input data-set="bizName" value="${esc(S.set.bizName)}" style="padding:8px;border:1.5px solid var(--ln);border-radius:7px"></label>
   <label class="muted">Paneer rate ₹/kg <input data-set="paneerRate" value="${S.set.paneerRate}" inputmode="decimal" style="width:80px;padding:8px;border:1.5px solid var(--ln);border-radius:7px"></label></div></div>
- <div class="card"><h3>${S.cust.length} customers</h3><div style="overflow:auto"><table class="c"><tr><th>Name</th><th>Mobile</th><th>Rate ₹/L</th><th></th></tr>`;
- for(const c of S.cust)h+=`<tr><td><input data-c="${c._id}|name" value="${esc(c.name)}"></td><td><input data-c="${c._id}|mobile" value="${esc(c.mobile)}" inputmode="tel"></td><td><input data-c="${c._id}|area" list="al" value="${esc(c.area)}"></td><td><input data-c="${c._id}|rate" value="${c.rate}" inputmode="decimal" style="width:70px"></td><td><button class="b r" onclick="delCust('${c._id}')">Delete</button></td></tr>`;
+ <div class="card"><h3>${S.cust.length} customers</h3><div style="overflow:auto"><table class="c"><tr><th>Name</th><th>Mobile</th><th>Daily L</th><th>Rate ₹/L</th><th></th></tr>`;
+ for(const c of S.cust)h+=`<tr><td><input data-c="${c._id}|name" value="${esc(c.name)}"></td><td><input data-c="${c._id}|mobile" value="${esc(c.mobile)}" inputmode="tel"></td><td><input data-c="${c._id}|area" list="al" value="${esc(c.area)}"></td><td><input data-c="${c._id}|dailyMilkLitres" type="number" min="0" step="0.1" value="${c.dailyMilkLitres??0}" style="width:75px"></td><td><input data-c="${c._id}|rate" value="${c.rate}" inputmode="decimal" style="width:70px"></td><td><button class="b r" onclick="delCust('${c._id}')">Delete</button></td></tr>`;
  $('#custBox').innerHTML=h+'</table></div></div>'}
 async function addCust(){const name=$('#na').value.trim();if(!name)return alert('Please type the customer name');
- try{await api('POST','/api/customers',{name,mobile:$('#nm2').value,area:$('#nar').value,rate:$('#nr').value});await load(S.ym)}catch(e){alert(e.message)}}
+ try{await api('POST','/api/customers',{name,mobile:$('#nm2').value,area:$('#nar').value,rate:$('#nr').value,dailyMilkLitres:$('#ndl').value});await load(S.ym)}catch(e){alert(e.message)}}
 async function delCust(id){if(!confirm(`Delete "${S.by[id].name}" and ALL their records (every month)?`))return;await api('DELETE','/api/customers/'+id);await load(S.ym)}
 async function carry(){if(!confirm("Copy last month's outstanding balance into 'Prev bal' for every customer?"))return;const r=await api('POST','/api/carry',{month:S.ym});await load(S.ym);alert(r.n+' balances carried forward.')}
 
@@ -270,14 +270,14 @@ $('#day').onchange=e=>setDay(e.target.value);
 $('#mon').onchange=e=>{if(!e.target.value)return;load(e.target.value);$('#day').value=e.target.value+'-01'};
 
 /* ---------- bill & CSV ---------- */
-let currentInvoiceId=null;
+let currentInvoiceId=null, sequentialBillsMode=false, sequentialBillIndex=0;
 function bill(id){
  currentInvoiceId=id;
  const c=S.by[id],k=calc(c),n=dim(),s=S.sh[id]||{days:{}};
  const monthName=new Date(Number(S.ym.slice(0,4)),Number(S.ym.slice(5,7))-1,1).toLocaleDateString('en-IN',{month:'long',year:'numeric'});
  let rows='',hasPaneer=false;
  for(let d=1;d<=n;d++){
-  const x=s.days?.[d]||{},litres=num(x.m)+num(x.e),paneer=num(x.p);
+  const x=s.days?.[d]||{},litres=num(g(id,d,'m'))+num(g(id,d,'e')),paneer=num(g(id,d,'p'));
   if(paneer)hasPaneer=true;
   const milkAmount=litres*k.rate,paneerAmount=paneer*S.set.paneerRate;
   rows+=`<tr><td>${pad(d)} ${esc(monthName.split(' ')[0].slice(0,3))}</td><td>${litres?fmt(litres):'–'}</td><td>${paneer?fmt(paneer):'–'}</td><td>${money(milkAmount)||'₹0'}</td><td>${money(paneerAmount)||'₹0'}</td><td><b>${money(milkAmount+paneerAmount)||'₹0'}</b></td></tr>`;
@@ -287,7 +287,7 @@ function bill(id){
   <button class="b" onclick="downloadInvoicePDF()">Download PDF</button>
   <button class="b o" onclick="downloadInvoiceImage()">Download Image</button>
   <button class="b o" id="shareInvoiceBtn" onclick="sharePreparedInvoice()" disabled>Preparing share…</button>
-  <button class="b o" onclick="nextInvoice()">Next Bill →</button>
+  <button class="b o" onclick="previousInvoice()" ${S.cust.findIndex(x=>String(x._id)===String(currentInvoiceId))<=0?'disabled':''}>← Previous Bill</button><button class="b o" onclick="nextInvoice()">${S.cust.findIndex(x=>String(x._id)===String(currentInvoiceId))>=S.cust.length-1?'Finish Bills':'Next Bill →'}</button>
   <button class="b o" onclick="print()">Print</button>
   <button class="b o" onclick="$('#bill').classList.add('hide')">Close</button>
  </div>
@@ -316,10 +316,16 @@ function bill(id){
  // Prepare the image in advance. The actual Share API is called only on a fresh tap.
  prepareInvoiceShare();
 }
+function previousInvoice(){
+ const idx=S.cust.findIndex(x=>String(x._id)===String(currentInvoiceId));
+ if(idx>0)bill(S.cust[idx-1]._id);
+}
 function nextInvoice(){
  const idx=S.cust.findIndex(x=>String(x._id)===String(currentInvoiceId));
- if(idx<0 || idx>=S.cust.length-1){
-  alert('This is the last bill.');
+ if(idx<0)return;
+ if(idx>=S.cust.length-1){
+  sequentialBillsMode=false;
+  alert('You have reached the last bill.');
   return;
  }
  bill(S.cust[idx+1]._id);
@@ -399,56 +405,12 @@ function sharePreparedInvoice(){
 }
 
 let preparedShareFiles=[];
-async function shareAllInvoices(){
+function shareAllInvoices(){
  if(!S.cust.length)return alert('No customers to invoice.');
  if(hasPending())return alert('Please tap Save All Changes before creating invoices.');
- if(!confirm(`Create ${S.cust.length} high-resolution PNG invoices for ${S.ym}?`))return;
- preparedShareFiles=[];
- try{
-  for(const c of S.cust){
-   bill(c._id);
-   const canvas=await invoiceCanvas();
-   const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
-   if(!blob)throw new Error('Could not render '+c.name);
-   preparedShareFiles.push(new File([blob],invoiceFileName('png'),{type:'image/png'}));
-  }
-  $('#bill').classList.remove('hide');
-  $('#bill').innerHTML=`<div style="max-width:760px;margin:20px auto;padding:16px"><h2>All invoices are ready</h2><p>${preparedShareFiles.length} high-resolution PNG invoices prepared for ${esc(S.ym)}. Tap Share All Bills once to send the complete set in one share action.</p><button class="b" id="shareAllPrepared">Tap to Share All Bills</button> <button class="b o" id="downloadAllPrepared">Download All PNGs</button><button class="b o" onclick="$('#bill').classList.add('hide')">Close</button></div>`;
-  $('#shareAllPrepared').onclick=shareAllPrepared;
-  $('#downloadAllPrepared').onclick=downloadAllPrepared;
- }catch(e){alert('Could not prepare all invoices: '+e.message);$('#bill').classList.add('hide')}
-}
-function shareAllPrepared(){
- if(!preparedShareFiles.length)return alert('Please prepare invoices first.');
-
- // IMPORTANT: call navigator.share synchronously from this button tap.
- // Never await image rendering, a timer, or another promise before this call.
- const shareData={
-  files:preparedShareFiles,
-  title:`Milk invoices ${S.ym}`,
-  text:`Monthly milk invoices for ${S.ym}`
- };
-
- if(!navigator.share || !navigator.canShare || !navigator.canShare({files:preparedShareFiles})){
-  downloadAllPrepared();
-  return;
- }
-
- try{
-  const sharePromise=navigator.share(shareData);
-  sharePromise.catch(err=>{
-   if(err.name==='AbortError')return;
-   // Some Android share targets reject a large batch. Keep the files ready
-   // and let the user explicitly retry or download them.
-   alert('Could not share all bills. Your invoices are still ready. Tap Share All Bills again, or use Download All PNGs.\n'+err.message);
-  });
- }catch(err){
-  alert('Could not share all bills. Your invoices are still ready. Tap Share All Bills again, or use Download All PNGs.\n'+err.message);
- }
-}
-function downloadAllPrepared(){
- preparedShareFiles.forEach(f=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),60000)});
- alert('All invoice PNGs downloaded. Select them together in WhatsApp.');
+ sequentialBillsMode=true;
+ sequentialBillIndex=0;
+ bill(S.cust[0]._id);
 }
 function csv(){const n=dim(),H=['Area','Name','Mobile'];for(let d=1;d<=n;d++)H.push(d+'/M',d+'/E',d+'/P');H.push('Litres','Rate','Milk Amount','Prev Balance','Paneer Amount','Total Due','Paid','Balance','Paneer Date');
  const R=[H];for(const c of S.cust){const k=calc(c),r=[c.area,c.name,c.mobile];for(let d=1;d<=n;d++)['m','e','p'].forEach(f=>r.push(g(c._id,d,f)??''));R.push(r.concat([k.l,k.rate,k.milk,k.prev,k.pan,k.due,k.paid,k.bal,k.pd]))}

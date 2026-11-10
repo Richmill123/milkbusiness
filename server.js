@@ -65,11 +65,12 @@ app.post('/api/customers', h(async (req) => {
   const b = req.body; if (!String(b.name || '').trim()) bad(0, 'Name is required');
   const last = await Cust.find().sort({ order: -1 }).limit(1).toArray();
   const doc = { _id: crypto.randomUUID(), name: b.name.trim(), mobile: b.mobile || '', area: (b.area || '').trim(),
-    rate: Number(b.rate) || 60, order: (last[0]?.order || 0) + 1 };
+    rate: Number(b.rate) || 60, dailyMilkLitres: Math.max(0, Number(b.dailyMilkLitres) || 0), order: (last[0]?.order || 0) + 1 };
   await Cust.insertOne(doc); return doc;
 }));
 app.put('/api/customers/:id', h(async (req) => {
   const $set = {}; for (const f of ['name', 'mobile', 'area']) if (f in req.body) $set[f] = String(req.body[f]).trim();
+  if ('dailyMilkLitres' in req.body) $set.dailyMilkLitres = Math.max(0, Number(req.body.dailyMilkLitres) || 0);
   if ('rate' in req.body) $set.rate = Number(req.body.rate) || 0;
   await Cust.updateOne({ _id: req.params.id }, { $set });
 }));
@@ -144,7 +145,7 @@ app.get('/api/cron/monthly-bills', h(async (req) => {
     let litres = 0, paneerKg = 0;
     const daily = [];
     for (let d = 1; d <= dayCount; d++) {
-      const x = sh.days?.[d] || {}, milk = (Number(x.m) || 0) + (Number(x.e) || 0), paneer = Number(x.p) || 0;
+      const x = sh.days?.[d] || {}, milk = (x.m !== undefined ? Number(x.m) || 0 : Number(c.dailyMilkLitres) || 0) + (Number(x.e) || 0), paneer = Number(x.p) || 0;
       litres += milk; paneerKg += paneer;
       daily.push({ day: d, milkLitres: milk, paneerKg: paneer });
     }
