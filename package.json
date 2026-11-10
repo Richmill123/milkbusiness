@@ -1,0 +1,14 @@
+{
+  "name": "milk-register",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node --env-file=.env server.js",
+    "import": "node --env-file=.env import.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "mongodb": "^6.8.0",
+    "xlsx": "^0.18.5"
+  }
+}

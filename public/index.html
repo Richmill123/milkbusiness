@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Milk Register</title>
+<style>
+:root{--g:#0f6b4f;--gd:#0a4f3a;--gs:#e6f2ed;--ln:#d9e0e6;--mut:#667;--bad:#b3261e}
+*{box-sizing:border-box}body{margin:0;font:15px system-ui,Segoe UI,Roboto,sans-serif;background:#f3f5f7;color:#17202a}
+header{background:var(--g);color:#fff;padding:8px 12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;position:sticky;top:0;z-index:50}
+header b{font-size:17px;margin-right:auto}#stat{font-size:13px;opacity:.9}#stat.bad{color:#ffd0cc;font-weight:700}
+header input{padding:7px;border-radius:8px;border:0;font:inherit}
+nav{display:flex;background:var(--gd);position:sticky;top:48px;z-index:49}
+nav button{flex:1;padding:11px;background:none;border:0;border-bottom:3px solid transparent;color:#cfe;font:600 14px inherit;cursor:pointer}
+nav button.on{color:#fff;border-color:#ffd166}
+main{padding:10px}.card{background:#fff;border:1px solid var(--ln);border-radius:10px;margin-bottom:10px;overflow:hidden}
+.card h3{margin:0;padding:9px 12px;background:#f7f9fa;border-bottom:1px solid var(--ln);font-size:14px;color:var(--gd);text-transform:uppercase;letter-spacing:.4px}
+button.b{background:var(--g);color:#fff;border:0;border-radius:8px;padding:9px 14px;font:600 14px inherit;cursor:pointer}
+button.b.o{background:#fff;color:var(--g);border:1.5px solid var(--g)}button.b.r{background:#fff;color:var(--bad);border:1.5px solid var(--bad)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}.bar input[type=search],.bar input[type=date]{padding:9px;border:1.5px solid var(--ln);border-radius:8px;font:inherit}
+.hide{display:none!important}.muted{color:var(--mut);font-size:13px}
+input.i{border:1.5px solid var(--ln);border-radius:7px;padding:8px 4px;text-align:center;font:600 15px inherit;width:100%;background:#fff}
+input.i.has{background:var(--gs);border-color:#9cc9b8}input.i:focus{outline:2px solid var(--g);background:#fffbe6}
+/* today */
+.tr{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #eef1f3}.tr .n{flex:1;min-width:0}.tr .n b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tr .n span{font-size:12px;color:var(--mut)}.tr label{width:62px;text-align:center;font-size:11px;color:var(--mut);font-weight:700}
+.ah{background:#eef3f1;padding:7px 12px;font-weight:700;color:var(--gd);display:flex;justify-content:space-between}
+.sum{display:flex;gap:8px;margin-bottom:10px}.sum div{flex:1;background:#fff;border:1px solid var(--ln);border-radius:10px;padding:8px;text-align:center}.sum b{display:block;font-size:20px;color:var(--g)}.sum span{font-size:11px;color:var(--mut);text-transform:uppercase}
+/* sheet */
+#sheetBox{overflow:auto;max-height:calc(100vh - 175px);background:#fff;border:1px solid var(--ln);border-radius:10px}
+table.s{border-collapse:separate;border-spacing:0;font-size:12.5px}
+.s th,.s td{border-right:1px solid var(--ln);border-bottom:1px solid var(--ln);padding:0;text-align:center;background:#fff;white-space:nowrap}
+.s thead th{position:sticky;background:#eef3f1;color:var(--gd);font-size:11px;z-index:5;padding:4px 2px}
+.s thead th{height:26px;line-height:18px}.s thead tr:nth-child(1) th{top:0}.s thead tr:nth-child(2) th{top:26px}
+.s th.sun{background:#fde7e4}.s th.tdy{background:#ffe9a8}
+.s .nm{position:sticky;left:0;z-index:6;text-align:left;padding:5px 8px;min-width:150px;max-width:150px;overflow:hidden;text-overflow:ellipsis;background:#fafbfc;font-weight:600;border-right:2px solid var(--ln)}
+.s thead .nm{z-index:9;background:#eef3f1}
+.s td input{width:40px;border:0;text-align:center;padding:7px 1px;font:600 12.5px inherit;background:transparent}
+.s td input.has{background:var(--gs)}.s td input:focus{outline:2px solid var(--g);outline-offset:-2px;background:#fffbe6}
+.s td.p input{color:#9a4d00}.s td.w{min-width:78px;font-weight:700}.s td.w input{width:76px}
+.s tr.at td{background:#dfece6!important;font-weight:800;color:var(--gd)}.s tr.gt td{background:#cfe3da!important;font-weight:800}
+.s tr.ah2 td{background:#eef3f1;font-weight:800;color:var(--gd);text-align:left;padding:6px 8px}
+.s td.bal{color:var(--bad);font-weight:800}
+/* customers */
+table.c{width:100%;border-collapse:collapse}.c td,.c th{padding:5px;border-bottom:1px solid #eef1f3;text-align:left}.c th{font-size:12px;color:var(--mut)}.c input{width:100%;padding:8px;border:1.5px solid var(--ln);border-radius:7px;font:inherit}
+/* dashboard & staff */
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:10px}.g2 div{background:#fff;border:1px solid var(--ln);border-radius:10px;padding:10px;text-align:center}
+.g2 b{display:block;font-size:21px;color:var(--g)}.g2 span{font-size:11px;color:var(--mut);text-transform:uppercase}.g2 .red b{color:var(--bad)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px}table.k{width:100%;border-collapse:collapse;font-size:13px}.k td,.k th{padding:7px 6px;border-bottom:1px solid #eef1f3;text-align:right}.k td:first-child,.k th:first-child{text-align:left}.k th{font-size:11px;color:var(--mut);text-transform:uppercase}
+.ab{width:36px;height:30px;border:1px solid var(--ln);border-radius:6px;background:#fff;font:700 12px inherit;cursor:pointer;color:#aab}.ab.P{background:#d8f0e4;color:#0a6b3e;border-color:#8fcfae}.ab.H{background:#fff0c9;color:#8a5a00;border-color:#e8c872}.ab.A{background:#fbdcd8;color:var(--bad);border-color:#e9a29b}
+/* bill */
+#bill{position:fixed;inset:0;background:#fff;z-index:100;overflow:auto;padding:16px}.bill{max-width:760px;margin:0 auto;border:1px solid #888;padding:16px}
+.bill table{border-collapse:collapse;width:100%;margin:8px 0}.bill td,.bill th{border:1px solid #888;padding:3px;text-align:center;font-size:12px}
+@media print{body>*:not(#bill){display:none!important}#bill{position:static;padding:0}.noprint{display:none}.bill{border:0}}
+
+/* mobile-first additions */
+.mobile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px}
+.mobile-grid input,.mobile-grid select,.mobile-grid textarea{width:100%;min-width:0;padding:10px;border:1.5px solid var(--ln);border-radius:8px;font:inherit;background:#fff}
+.mobile-grid .wide{grid-column:1/-1}
+.entry{padding:12px;border-bottom:1px solid #eef1f3;display:grid;grid-template-columns:1fr auto;gap:5px;align-items:start}
+.entry small{display:block;color:var(--mut);font-size:12px}.entry strong{font-size:15px}.entry .amount{font-weight:800;color:var(--gd);white-space:nowrap}
+#v-farm .table-wrap,#v-expenses .table-wrap{overflow:auto}
+@media(max-width:650px){
+ body{font-size:14px}header{gap:6px;padding:8px}header b{width:100%;font-size:16px}header input{width:100%}
+ nav{top:0;overflow-x:auto;position:sticky}nav button{flex:0 0 auto;min-width:88px;padding:12px 9px;font-size:13px}
+ main{padding:8px}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g2 b{font-size:18px}
+ .cols{grid-template-columns:1fr}.bar>*{max-width:100%}.bar input[type=search],.bar input[type=date]{flex:1;min-width:130px}
+ #sheetBox{max-height:calc(100dvh - 220px)}.s .nm{min-width:125px;max-width:125px}
+ .mobile-grid{grid-template-columns:1fr 1fr}.mobile-grid .wide{grid-column:1/-1}
+ .c input{min-width:100px}.card{border-radius:9px}
+}
+</style></head><body>
+<header><b id="biz">Milk Register</b><span id="stat"></span><input type="month" id="mon"></header>
+<nav><button data-view="dash" class="on">Dashboard</button><button data-view="today">Today</button><button data-view="sheet">Month Sheet</button><button data-view="staff">Employees</button><button data-view="cust">Customers</button><button data-view="farm">Farm</button><button data-view="expenses">Expenses</button><button data-view="profile">Profile</button></nav>
+<main>
+ <section id="v-dash"></section>
+ <section id="v-staff" class="hide"></section>
+ <section id="v-today" class="hide">
+  <div class="bar"><button class="b o" onclick="stepDay(-1)">‹</button><input type="date" id="day"><button class="b o" onclick="stepDay(1)">›</button>
+   <button class="b o" onclick="copyPrev()">Copy yesterday into empty boxes</button></div>
+  <div class="sum"><div><b data-t="all|DAY|m">0</b><span>Morning L</span></div><div><b data-t="all|DAY|e">0</b><span>Evening L</span></div><div><b data-t="all|DAY|p">0</b><span>Paneer kg</span></div></div>
+  <div id="todayList"></div>
+ </section>
+ <section id="v-sheet" class="hide">
+  <div class="bar"><input type="search" id="q" placeholder="Search customer…"><button class="b o" onclick="carry()">Carry last month's balance</button><button class="b o" onclick="csv()">Download Excel (CSV)</button>
+   <span class="muted">M = morning litres · E = evening litres · P = paneer kg · tap a box and type · arrow keys / Enter move around</span></div>
+  <div id="sheetBox"></div>
+ </section>
+ <section id="v-cust" class="hide"><div id="custBox"></div></section><section id="v-farm" class="hide"></section><section id="v-expenses" class="hide"></section><section id="v-profile" class="hide"></section>
+</main>
+<div id="bill" class="hide"></div>
+<script>
+const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const fmt=n=>n?String(Math.round(n*1000)/1000):'';
+const money=n=>n?'₹'+n.toLocaleString('en-IN',{maximumFractionDigits:2}):'';
+const num=v=>+v||0, pad=n=>String(n).padStart(2,'0');
+const S={ym:'',view:'dash',emp:[],att:{},cust:[],by:{},sh:{},set:{paneerRate:500,bizName:''},areas:[],farm:{cows:[]},expenses:[]};
+const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const dim=()=>{const[y,m]=S.ym.split('-');return new Date(y,m,0).getDate()};
+const DOW=['S','M','T','W','T','F','S'];
+
+async function api(m,u,b){const r=await fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
+ if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error||r.status);return r.json()}
+function stat(t,c){const s=$('#stat');s.textContent=t;s.className=c||''}
+async function run(p){stat('Saving…');try{await p;stat('Saved ✓')}catch(e){stat('NOT SAVED: '+e.message,'bad');alert('Could not save: '+e.message)}}
+
+/* ---------- data ---------- */
+async function load(ym){await flush();const[d,st,fa,ex]=await Promise.all([api('GET','/api/month/'+ym),api('GET','/api/staff/'+ym),api('GET','/api/farm/'+ym.slice(0,4)),api('GET','/api/expenses/'+ym)]);S.ym=ym;S.emp=st.employees;S.att=Object.fromEntries(st.att.map(a=>[a.eid,a]));S.cust=d.customers;S.by=Object.fromEntries(d.customers.map(c=>[c._id,c]));
+ S.sh=Object.fromEntries(d.sheets.map(s=>[s.cid,s]));S.set=d.settings;S.farm=fa;S.expenses=ex;$('#mon').value=ym;
+ $('#biz').textContent=S.set.bizName||'Milk Register';render()}
+const g=(id,d,f)=>S.sh[id]?.days?.[d]?.[f];
+function calc(c){const s=S.sh[c._id]||{};let l=0,kg=0;for(const d in s.days||{}){const x=s.days[d];l+=num(x.m)+num(x.e);kg+=num(x.p)}
+ const rate=s.rate??c.rate??0,milk=l*rate,pan=kg*S.set.paneerRate,prev=num(s.prev),paid=num(s.paid),due=milk+prev+pan;
+ return{l,kg,rate,milk,pan,prev,paid,due,bal:due-paid,pd:s.pdate||''}}
+function groups(){S.areas=[];const m={};for(const c of S.cust){const a=c.area||'Other';if(!m[a]){m[a]=[];S.areas.push(a)}m[a].push(c)}return S.areas.map(a=>[a,m[a]])}
+const sheetOf=id=>S.sh[id]||(S.sh[id]={cid:id,month:S.ym,days:{}});
+
+/* ---------- saving (batched) ---------- */
+let q=[],t;
+function cell(id,d,f,raw){const v=raw===''||isNaN(raw)?null:+raw,s=sheetOf(id);s.days[d]=s.days[d]||{};
+ if(v===null)delete s.days[d][f];else s.days[d][f]=v;if(!Object.keys(s.days[d]).length)delete s.days[d];
+ q.push({m:S.ym,cid:id,d,f,v});stat('Saving…');clearTimeout(t);t=setTimeout(flush,300)}
+async function flush(){clearTimeout(t);if(!q.length)return;const ops=q;q=[];
+ try{await api('POST','/api/cells',{ops});if(!q.length)stat('Saved ✓')}catch(e){q=ops.concat(q);stat('NOT SAVED – retrying…','bad');t=setTimeout(flush,3000)}}
+function field(id,f,raw){const s=sheetOf(id);const v=f==='pdate'?raw:(raw===''||isNaN(raw)?null:+raw);if(v===null||v==='')delete s[f];else s[f]=v;
+ run(api('POST','/api/sheet',{month:S.ym,cid:id,f,v}))}
+addEventListener('beforeunload',e=>{if(q.length){e.preventDefault();e.returnValue=''}});
+
+/* ---------- live totals ---------- */
+function refresh(){const cc={},C=c=>cc[c._id]||(cc[c._id]=calc(c)),D=+($('#day').value||'0000-00-00').slice(8);
+ $$('[data-v]').forEach(el=>{const[id,k]=el.dataset.v.split('|'),v=C(S.by[id])[k];el.textContent=k==='l'?fmt(v):money(v)});
+ $$('[data-t]').forEach(el=>{let[a,d,f]=el.dataset.t.split('|');if(d==='DAY')d=D;let tot=0;
+  for(const c of S.cust){if(a!=='all'&&(c.area||'Other')!==S.areas[a])continue;tot+=d==='0'?C(c)[f]:num(g(c._id,d,f))}
+  el.textContent=(d==='0'&&f!=='l')?money(tot):(fmt(tot)||'0')});
+ $$('[data-dd]').forEach(el=>{let tot=0;for(const c of S.cust)tot+=num(g(c._id,el.dataset.dd,'m'))+num(g(c._id,el.dataset.dd,'e'));el.textContent=fmt(tot)})}
+document.addEventListener('change',e=>{const i=e.target;
+ if(i.dataset.k){const[id,d,f]=i.dataset.k.split('|');cell(id,+d,f,i.value.trim());i.classList.toggle('has',i.value!=='');refresh()}
+ else if(i.dataset.s){const[id,f]=i.dataset.s.split('|');field(id,f,i.value.trim());refresh()}
+ else if(i.dataset.c){const[id,f]=i.dataset.c.split('|'),c=S.by[id];c[f]=f==='rate'?+i.value||0:i.value.trim();run(api('PUT','/api/customers/'+id,{[f]:c[f]}))}
+ else if(i.dataset.e){const[id,f]=i.dataset.e.split('|'),e=S.emp.find(x=>x._id===id);e[f]=f==='salary'?+i.value||0:i.value.trim();run(api('PUT','/api/employees/'+id,{[f]:e[f]}));rStaff()}
+ else if(i.dataset.cow){const [idx,f]=i.dataset.cow.split('|');S.farm.cows[+idx][f]=f==='name'?i.value:(+i.value||0);saveFarm()}
+ else if(i.dataset.af){const[id,f]=i.dataset.af.split('|'),a=attOf(id);if(i.value.trim()===''||isNaN(i.value))delete a[f];else a[f]=+i.value;run(api('POST','/api/attf',{month:S.ym,eid:id,f,v:i.value.trim()}));rStaff()}
+ else if(i.dataset.set){S.set[i.dataset.set]=i.dataset.set==='paneerRate'?+i.value||0:i.value;$('#biz').textContent=S.set.bizName||'Milk Register';run(api('PUT','/api/settings',{[i.dataset.set]:S.set[i.dataset.set]}));refresh()}});
+document.addEventListener('keydown',e=>{const i=e.target;if(i.tagName!=='INPUT'||i.dataset.r==null)return;let r=+i.dataset.r,x=+i.dataset.x;
+ const k=e.key;if(k==='Enter'||k==='ArrowDown')r++;else if(k==='ArrowUp')r--;else if(k==='ArrowRight')x++;else if(k==='ArrowLeft')x--;else return;
+ e.preventDefault();const n=document.querySelector(`[data-r="${r}"][data-x="${x}"]`);if(n){n.focus();n.select()}});
+document.addEventListener('focusin',e=>{if(e.target.dataset?.r!=null)e.target.select()});
+
+/* ---------- views ---------- */
+const inp=(c,d,f,r,x)=>{const v=g(c._id,d,f);return`<input class="i${v!=null?' has':''}" inputmode="decimal" data-k="${c._id}|${d}|${f}" data-r="${r}" data-x="${x}" value="${v??''}">`};
+function render(){({dash:rDash,staff:rStaff,today:rToday,sheet:rSheet,cust:rCust,farm:rFarm,expenses:rExpenses,profile:rProfile})[S.view]();refresh()}
+function rToday(){const D=+$('#day').value.slice(8);let h='',r=0;
+ if(!S.cust.length)h='<div class="card"><div class="tr muted">No customers yet. Open the Customers tab to add some.</div></div>';
+ for(const[a,list]of groups()){h+=`<div class="card"><div class="ah"><span>${esc(a)}</span><span>${list.length} customers</span></div>`;
+  h+='<div class="tr"><div class="n"></div><label>Morning</label><label>Evening</label><label>Paneer</label></div>';
+  for(const c of list){const i=S.cust.indexOf(c);h+=`<div class="tr"><div class="n"><b>${esc(c.name)}</b><span>${esc(c.mobile)}</span></div><div style="width:62px">${inp(c,D,'m',i,0)}</div><div style="width:62px">${inp(c,D,'e',i,1)}</div><div style="width:62px">${inp(c,D,'p',i,2)}</div></div>`}
+  h+='</div>'}
+ $('#todayList').innerHTML=h}
+function rSheet(){const n=dim(),now=iso(new Date()),G=groups();
+ let h='<table class="s"><thead><tr><th class="nm" rowspan="2">Customer</th>';
+ for(let d=1;d<=n;d++){const dw=new Date(S.ym+'-'+pad(d)+'T00:00').getDay(),cl=(dw===0?'sun ':'')+(now===S.ym+'-'+pad(d)?'tdy':'');h+=`<th colspan="3" class="${cl}" ${cl.includes('tdy')?'id="tdy"':''}>${d} ${DOW[dw]}</th>`}
+ for(const x of['Litres','Rate','Milk ₹','Prev bal','Paneer ₹','Total due','Paid','Balance','Paneer date','Bill'])h+=`<th rowspan="2" style="min-width:${x==='Paneer date'?110:70}px">${x}</th>`;
+ h+='</tr><tr>';for(let d=1;d<=n;d++)h+='<th>M</th><th>E</th><th>P</th>';h+='</tr></thead><tbody>';
+ const sumCols=ai=>['l','','milk','','pan','due','','bal'].map((k,j)=>k?`<td class="w" data-t="${ai}|0|${k}"></td>`:'<td></td>').join('')+'<td></td><td></td>';
+ G.forEach(([a,list],ai)=>{h+=`<tr class="ah2"><td class="nm" style="background:#eef3f1">${esc(a)}</td><td colspan="${n*3+10}"></td></tr>`;
+  for(const c of list){const i=S.cust.indexOf(c),s=S.sh[c._id]||{};h+=`<tr data-n="${esc(c.name.toLowerCase())}"><td class="nm" title="${esc(c.name)}">${esc(c.name)}</td>`;
+   for(let d=1;d<=n;d++)['m','e','p'].forEach((f,k)=>{const v=g(c._id,d,f);h+=`<td class="${f}"><input class="${v!=null?'has':''}" inputmode="decimal" data-k="${c._id}|${d}|${f}" data-r="${i}" data-x="${(d-1)*3+k}" value="${v??''}"></td>`});
+   const X=n*3,ed=(f,v,x)=>`<td class="w"><input inputmode="decimal" data-s="${c._id}|${f}" data-r="${i}" data-x="${X+x}" value="${v??''}"></td>`;
+   h+=`<td class="w" data-v="${c._id}|l"></td>${ed('rate',s.rate??c.rate,1)}<td class="w" data-v="${c._id}|milk"></td>${ed('prev',s.prev,3)}<td class="w" data-v="${c._id}|pan"></td><td class="w" data-v="${c._id}|due"></td>${ed('paid',s.paid,6)}<td class="w bal" data-v="${c._id}|bal"></td><td class="w"><input type="date" style="width:108px" data-s="${c._id}|pdate" value="${esc(s.pdate||'')}"></td><td><button class="b o" style="padding:3px 8px" onclick="bill('${c._id}')">Bill</button></td></tr>`}
+  h+=`<tr class="at"><td class="nm" style="background:#dfece6">TOTAL ${esc(a)}</td>`;
+  for(let d=1;d<=n;d++)['m','e','p'].forEach(f=>h+=`<td data-t="${ai}|${d}|${f}"></td>`);h+=sumCols(ai)+'</tr>'});
+ h+='<tr class="gt"><td class="nm" style="background:#cfe3da">ALL AREAS</td>';for(let d=1;d<=n;d++)['m','e','p'].forEach(f=>h+=`<td data-t="all|${d}|${f}"></td>`);h+=sumCols('all')+'</tr>';
+ h+='<tr class="gt"><td class="nm" style="background:#cfe3da">PER DAY (M+E)</td>';for(let d=1;d<=n;d++)h+=`<td colspan="3" data-dd="${d}"></td>`;h+='<td colspan="10"></td></tr></tbody></table>';
+ $('#sheetBox').innerHTML=S.cust.length?h:'<div class="tr muted">No customers yet.</div>';
+ const t=$('#tdy');if(t)$('#sheetBox').scrollLeft=t.offsetLeft-190;filterRows()}
+function filterRows(){const v=$('#q').value.toLowerCase().trim();$$('#sheetBox tr[data-n]').forEach(r=>r.classList.toggle('hide',!!v&&!r.dataset.n.includes(v)))}
+$('#q').oninput=filterRows;
+function rCust(){const areas=[...new Set(S.cust.map(c=>c.area).filter(Boolean))];
+ let h=`<datalist id="al">${areas.map(a=>`<option value="${esc(a)}">`).join('')}</datalist>
+ <div class="card"><h3>Add customer</h3><div style="padding:10px;display:flex;gap:8px;flex-wrap:wrap">
+  <input id="na" placeholder="Name *" style="flex:2;min-width:140px;padding:9px;border:1.5px solid var(--ln);border-radius:8px"><input id="nm2" placeholder="Mobile" inputmode="tel" style="flex:1;min-width:110px;padding:9px;border:1.5px solid var(--ln);border-radius:8px">
+  <input id="nar" list="al" placeholder="Area / route" style="flex:1;min-width:110px;padding:9px;border:1.5px solid var(--ln);border-radius:8px"><input id="nr" value="60" inputmode="decimal" style="width:70px;padding:9px;border:1.5px solid var(--ln);border-radius:8px">
+  <button class="b" onclick="addCust()">+ Add</button></div></div>
+ <div class="card"><h3>Settings</h3><div style="padding:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+  <label class="muted">Business name <input data-set="bizName" value="${esc(S.set.bizName)}" style="padding:8px;border:1.5px solid var(--ln);border-radius:7px"></label>
+  <label class="muted">Paneer rate ₹/kg <input data-set="paneerRate" value="${S.set.paneerRate}" inputmode="decimal" style="width:80px;padding:8px;border:1.5px solid var(--ln);border-radius:7px"></label></div></div>
+ <div class="card"><h3>${S.cust.length} customers</h3><div style="overflow:auto"><table class="c"><tr><th>Name</th><th>Mobile</th><th>Area</th><th>Rate ₹/L</th><th></th></tr>`;
+ for(const c of S.cust)h+=`<tr><td><input data-c="${c._id}|name" value="${esc(c.name)}"></td><td><input data-c="${c._id}|mobile" value="${esc(c.mobile)}" inputmode="tel"></td><td><input data-c="${c._id}|area" list="al" value="${esc(c.area)}"></td><td><input data-c="${c._id}|rate" value="${c.rate}" inputmode="decimal" style="width:70px"></td><td><button class="b r" onclick="delCust('${c._id}')">Delete</button></td></tr>`;
+ $('#custBox').innerHTML=h+'</table></div></div>'}
+async function addCust(){const name=$('#na').value.trim();if(!name)return alert('Please type the customer name');
+ try{await api('POST','/api/customers',{name,mobile:$('#nm2').value,area:$('#nar').value,rate:$('#nr').value});await load(S.ym)}catch(e){alert(e.message)}}
+async function delCust(id){if(!confirm(`Delete "${S.by[id].name}" and ALL their records (every month)?`))return;await api('DELETE','/api/customers/'+id);await load(S.ym)}
+async function carry(){if(!confirm("Copy last month's outstanding balance into 'Prev bal' for every customer?"))return;const r=await api('POST','/api/carry',{month:S.ym});await load(S.ym);alert(r.n+' balances carried forward.')}
+
+/* ---------- employees ---------- */
+const attOf=id=>S.att[id]||(S.att[id]={eid:id,month:S.ym,days:{}});
+function eCalc(e){const a=S.att[e._id]||{days:{}};let P=0,H=0,A=0;for(const v of Object.values(a.days||{})){if(v==='P')P++;else if(v==='H')H++;else if(v==='A')A++}
+ const pres=P+H/2,earned=Math.round((e.salary||0)*pres/dim()),adv=num(a.advance),net=earned-adv,paid=num(a.paid);return{P,H,A,pres,earned,adv,net,paid,left:net-paid}}
+function cycle(id,d){const a=attOf(id),cur=a.days[d]||'',nx={'':'P',P:'H',H:'A',A:''}[cur];if(nx)a.days[d]=nx;else delete a.days[d];
+ run(api('POST','/api/att',{month:S.ym,eid:id,d,v:nx||null}));render()}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b){const[id,d]=b.dataset.a.split('|');cycle(id,+d)}});
+function rStaff(){const n=dim(),now=iso(new Date()),box=$('#sbox'),sl=box?box.scrollLeft:null;
+ let h=`<div class="card"><h3>Attendance & salary – ${S.ym}</h3><div class="muted" style="padding:8px 12px">Tap a day to change: <span class="ab P" style="display:inline-block;text-align:center;line-height:28px">P</span> present · <span class="ab H" style="display:inline-block;text-align:center;line-height:28px">H</span> half day · <span class="ab A" style="display:inline-block;text-align:center;line-height:28px">A</span> absent · blank = not marked. Pay = salary ÷ ${n} days × days present.</div>`;
+ if(!S.emp.length)h+='<div class="tr muted">No employees yet – add one below.</div>';
+ else{h+='<div id="sbox" style="overflow:auto"><table class="s"><thead><tr><th class="nm">Employee</th>';
+  for(let d=1;d<=n;d++){const dw=new Date(S.ym+'-'+pad(d)+'T00:00').getDay();h+=`<th class="${dw===0?'sun':''}${now===S.ym+'-'+pad(d)?' tdy':''}" style="min-width:38px">${d}<br>${DOW[dw]}</th>`}
+  for(const x of['Present','Salary','Earned','Advance','Net pay','Paid','To pay'])h+=`<th style="min-width:72px">${x}</th>`;h+='</tr></thead><tbody>';
+  let T={pres:0,earned:0,adv:0,net:0,paid:0,left:0};
+  for(const e of S.emp){const k=eCalc(e),a=S.att[e._id]||{days:{}};for(const x in T)T[x]+=k[x];
+   h+=`<tr><td class="nm">${esc(e.name)}<br><span class="muted" style="font-weight:400">${esc(e.role)}</span></td>`;
+   for(let d=1;d<=n;d++){const v=a.days?.[d]||'';h+=`<td><button class="ab ${v}" data-a="${e._id}|${d}">${v||'·'}</button></td>`}
+   h+=`<td class="w">${fmt(k.pres)||'0'}</td><td class="w">${money(e.salary)}</td><td class="w">${money(k.earned)}</td>
+   <td class="w"><input inputmode="decimal" data-af="${e._id}|advance" value="${a.advance??''}"></td><td class="w">${money(k.net)}</td>
+   <td class="w"><input inputmode="decimal" data-af="${e._id}|paid" value="${a.paid??''}"></td><td class="w bal">${money(k.left)||'₹0'}</td></tr>`}
+  h+=`<tr class="gt"><td class="nm" style="background:#cfe3da">TOTAL</td><td colspan="${n}"></td><td class="w"></td><td class="w"></td><td class="w">${money(T.earned)}</td><td class="w">${money(T.adv)}</td><td class="w">${money(T.net)}</td><td class="w">${money(T.paid)}</td><td class="w">${money(T.left)}</td></tr></tbody></table></div>`}
+ h+='</div>';
+ const ib='padding:9px;border:1.5px solid var(--ln);border-radius:8px';
+ h+=`<div class="card"><h3>Add employee</h3><div style="padding:10px;display:flex;gap:8px;flex-wrap:wrap">
+  <input id="en" placeholder="Name *" style="flex:2;min-width:140px;${ib}"><input id="em" placeholder="Mobile" inputmode="tel" style="flex:1;min-width:110px;${ib}">
+  <input id="er" placeholder="Role (Delivery, Cleaner…)" style="flex:1;min-width:130px;${ib}">
+  <input id="es" placeholder="Monthly salary ₹" inputmode="decimal" style="width:130px;${ib}"><button class="b" onclick="addEmp()">+ Add</button></div></div>`;
+ if(S.emp.length){h+='<div class="card"><h3>Edit employees</h3><div style="overflow:auto"><table class="c"><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Salary ₹/month</th><th></th></tr>';
+  for(const e of S.emp)h+=`<tr><td><input data-e="${e._id}|name" value="${esc(e.name)}"></td><td><input data-e="${e._id}|mobile" value="${esc(e.mobile)}" inputmode="tel"></td><td><input data-e="${e._id}|role" value="${esc(e.role)}"></td><td><input data-e="${e._id}|salary" value="${e.salary}" inputmode="decimal" style="width:100px"></td><td><button class="b r" onclick="delEmp('${e._id}')">Delete</button></td></tr>`;h+='</table></div></div>'}
+ $('#v-staff').innerHTML=h;if(sl!=null&&$('#sbox'))$('#sbox').scrollLeft=sl;else if($('#sbox')){const i=new Date().getDate();if(now.slice(0,7)===S.ym)$('#sbox').scrollLeft=Math.max(0,i*38-150)}}
+async function addEmp(){const name=$('#en').value.trim();if(!name)return alert('Please type the employee name');
+ try{await api('POST','/api/employees',{name,mobile:$('#em').value,role:$('#er').value,salary:$('#es').value});await load(S.ym)}catch(e){alert(e.message)}}
+async function delEmp(id){if(!confirm('Delete this employee and ALL their attendance records?'))return;await api('DELETE','/api/employees/'+id);await load(S.ym)}
+
+/* ---------- dashboard ---------- */
+function rDash(){const n=dim(),nowIso=iso(new Date()),D=nowIso.slice(0,7)===S.ym?+nowIso.slice(8):n,lbl=nowIso.slice(0,7)===S.ym?'Today ('+D+')':'Last day ('+D+')';
+ let tm=0,te=0,tp=0,milkAmt=0,panAmt=0,prev=0,paid=0,bal=0;const daily=[],byC=[];
+ for(let d=1;d<=n;d++){let m=0,e=0;for(const c of S.cust){m+=num(g(c._id,d,'m'));e+=num(g(c._id,d,'e'))}daily.push([m,e])}
+ const dm=daily[D-1]||[0,0];let dp=0;for(const c of S.cust)dp+=num(g(c._id,D,'p'));
+ for(const c of S.cust){const k=calc(c);tm+=k.l;tp+=k.kg;milkAmt+=k.milk;panAmt+=k.pan;prev+=k.prev;paid+=k.paid;bal+=k.bal;byC.push([c,k])}
+ let pres=0,half=0,absent=0,unm=0,payNet=0,payLeft=0;
+ for(const e of S.emp){const v=S.att[e._id]?.days?.[D],k=eCalc(e);if(v==='P')pres++;else if(v==='H')half++;else if(v==='A')absent++;else unm++;payNet+=k.net;payLeft+=k.left}
+ const card=(v,l,c='')=>`<div class="${c}"><b>${v}</b><span>${l}</span></div>`;
+ let h=`<div class="muted" style="margin-bottom:6px">Showing ${S.ym} · figures use every quantity entered in the month sheet (including days not yet delivered).</div>
+ <div class="g2">${card(fmt(dm[0]+dm[1])||'0',lbl+' litres')}${card(fmt(dp)||'0',lbl+' paneer kg')}${card(fmt(tm)||'0','Month litres')}${card(fmt(tp)||'0','Month paneer kg')}
+  ${card(money(milkAmt+panAmt)||'₹0','Billed this month')}${card(money(paid)||'₹0','Collected')}${card(money(bal)||'₹0','Outstanding','red')}${card(S.cust.length,'Customers')}</div>
+ <div class="g2">${card(`${pres+half} / ${S.emp.length}`,'Staff present '+lbl.split(' ')[0].toLowerCase())}${card(absent,'Staff absent')}${card(money(payNet)||'₹0','Payroll (net of advances)')}${card(money(payLeft)||'₹0','Salary still to pay','red')}</div>`;
+ // chart
+ const mx=Math.max(1,...daily.map(x=>x[0]+x[1])),W=640,H=170,bw=W/n;let svg=`<svg viewBox="0 0 ${W} ${H+22}" style="width:100%;height:auto;max-height:220px">`;
+ daily.forEach(([m,e],i)=>{const hm=m/mx*H,he=e/mx*H,x=i*bw+2;svg+=`<rect x="${x}" y="${H-hm-he}" width="${bw-4}" height="${he}" fill="#e8a33d"/><rect x="${x}" y="${H-hm}" width="${bw-4}" height="${hm}" fill="${i+1===D?'#0a4f3a':'#0f6b4f'}"/>`;
+  if((i+1)%5===0||i===0)svg+=`<text x="${x+bw/2-2}" y="${H+14}" font-size="10" text-anchor="middle" fill="#667">${i+1}</text>`});
+ svg+=`<text x="2" y="10" font-size="10" fill="#667">${fmt(mx)} L</text></svg>`;
+ h+=`<div class="card"><h3>Litres per day <span style="text-transform:none;font-weight:400;color:var(--mut)">— <span style="color:#0f6b4f">■</span> morning <span style="color:#e8a33d">■</span> evening</span></h3><div style="padding:10px">${svg}</div></div><div class="cols">`;
+ // areas
+ h+='<div class="card"><h3>By area</h3><div style="overflow:auto"><table class="k"><tr><th>Area</th><th>Cust</th><th>Litres</th><th>Billed</th><th>Due</th></tr>';
+ for(const[a,list]of groups()){let l=0,b=0,o=0;for(const c of list){const k=calc(c);l+=k.l;b+=k.milk+k.pan;o+=k.bal}h+=`<tr><td>${esc(a)}</td><td>${list.length}</td><td>${fmt(l)}</td><td>${money(b)}</td><td style="color:var(--bad);font-weight:700">${money(o)}</td></tr>`}
+ h+='</table></div></div>';
+ // top due
+ byC.sort((a,b)=>b[1].bal-a[1].bal);h+='<div class="card"><h3>Highest outstanding</h3><div style="overflow:auto"><table class="k"><tr><th>Customer</th><th style="text-align:left">Area</th><th>Balance</th></tr>';
+ for(const[c,k]of byC.slice(0,8))if(k.bal>0)h+=`<tr><td>${esc(c.name)}</td><td style="text-align:left;font-size:12px">${esc(c.area)}</td><td style="color:var(--bad);font-weight:700">${money(k.bal)}</td></tr>`;
+ h+='</table></div></div>';
+ // staff today
+ h+=`<div class="card"><h3>Staff attendance – ${lbl}</h3>`;
+ if(!S.emp.length)h+='<div class="tr muted">No employees yet. Open the Employees tab to add them.</div>';
+ for(const e of S.emp){const v=S.att[e._id]?.days?.[D]||'';h+=`<div class="tr"><div class="n"><b>${esc(e.name)}</b><span>${esc(e.role)}</span></div><button class="ab ${v}" data-a="${e._id}|${D}" style="width:56px;height:38px">${v||'Mark'}</button></div>`}
+ h+='</div></div>';
+ $('#v-dash').innerHTML=h}
+
+/* ---------- today helpers ---------- */
+function setDay(v){if(!v)return;$('#day').value=v;if(v.slice(0,7)!==S.ym)load(v.slice(0,7));else render()}
+function stepDay(n){const d=new Date($('#day').value+'T00:00');d.setDate(d.getDate()+n);setDay(iso(d))}
+function copyPrev(){const D=+$('#day').value.slice(8);if(D<2)return alert('Pick day 2 or later');let k=0;
+ for(const c of S.cust)for(const f of['m','e','p']){const y=g(c._id,D-1,f);if(y!=null&&g(c._id,D,f)==null){cell(c._id,D,f,y);k++}}
+ render();if(!k)alert('Nothing to copy – all boxes already filled or yesterday is empty.')}
+$('#day').onchange=e=>setDay(e.target.value);
+$('#mon').onchange=e=>{if(!e.target.value)return;load(e.target.value);$('#day').value=e.target.value+'-01'};
+
+/* ---------- bill & CSV ---------- */
+function bill(id){const c=S.by[id],k=calc(c),n=dim(),s=S.sh[id]||{days:{}};let rows='';
+ for(let a=1;a<=n;a+=8){let r1='',r2='';for(let d=a;d<a+8;d++){r1+=`<th>${d<=n?d:''}</th>`;const x=s.days[d]||{};r2+=`<td>${d<=n?(fmt(num(x.m)+num(x.e))||'–')+(x.p?` <small>+${x.p}kg P</small>`:''):''}</td>`}rows+=`<tr>${r1}</tr><tr>${r2}</tr>`}
+ $('#bill').innerHTML=`<div class="noprint" style="margin-bottom:10px"><button class="b" onclick="print()">Print / Save PDF</button> <button class="b o" onclick="$('#bill').classList.add('hide')">Close</button></div>
+ <div class="bill"><h2 style="text-align:center;margin:0">${esc(S.set.bizName||'Milk Supply')}</h2><p style="text-align:center;margin:2px 0 10px"><b>MONTHLY BILL – ${S.ym}</b></p>
+ <p>${S.set.ownerName?`<b>${esc(S.set.ownerName)}</b> · `:''}${esc(S.set.address||'')}${S.set.phone?' · '+esc(S.set.phone):''}${S.set.gstin?` · GSTIN ${esc(S.set.gstin)}`:''}</p><p><b>${esc(c.name)}</b> ${c.mobile?'· '+esc(c.mobile):''} · ${esc(c.area)}</p><table>${rows}</table><p class="muted">Litres per day (morning + evening). “–” = no delivery.</p>
+ <table style="text-align:left"><tr><td>Total milk</td><td>${fmt(k.l)} L × ₹${k.rate}</td><td>${money(k.milk)||'₹0'}</td></tr>
+ ${k.kg?`<tr><td>Paneer</td><td>${fmt(k.kg)} kg × ₹${S.set.paneerRate}</td><td>${money(k.pan)}</td></tr>`:''}
+ <tr><td>Previous balance</td><td></td><td>${money(k.prev)||'₹0'}</td></tr><tr><td>Paid</td><td></td><td>${money(k.paid)||'₹0'}</td></tr>
+ <tr><td><b>BALANCE TO PAY</b></td><td></td><td><b>${money(k.bal)||'₹0'}</b></td></tr></table></div>`;$('#bill').classList.remove('hide')}
+function csv(){const n=dim(),H=['Area','Name','Mobile'];for(let d=1;d<=n;d++)H.push(d+'/M',d+'/E',d+'/P');H.push('Litres','Rate','Milk Amount','Prev Balance','Paneer Amount','Total Due','Paid','Balance','Paneer Date');
+ const R=[H];for(const c of S.cust){const k=calc(c),r=[c.area,c.name,c.mobile];for(let d=1;d<=n;d++)['m','e','p'].forEach(f=>r.push(g(c._id,d,f)??''));R.push(r.concat([k.l,k.rate,k.milk,k.prev,k.pan,k.due,k.paid,k.bal,k.pd]))}
+ const t='\ufeff'+R.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n'),a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([t],{type:'text/csv'}));a.download=`milk-${S.ym}.csv`;a.click()}
+
+
+/* ---------- farm, expenses & business profile ---------- */
+const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+async function saveFarm(){try{await api('PUT','/api/farm/'+S.ym.slice(0,4),{cows:S.farm.cows});stat('Farm data saved ✓')}catch(e){stat('Farm save failed: '+e.message,'bad')}}
+function rFarm(){
+ const cows=S.farm.cows||[];let h=`<div class="card"><h3>Farm production · ${S.ym.slice(0,4)}</h3><div class="muted" style="padding:9px 12px">Monthly milk production by cow or herd group. Tap a value to edit; changes save automatically.</div>`;
+ cows.forEach((c,i)=>{h+=`<div style="padding:12px;border-bottom:1px solid #eef1f3"><div class="mobile-grid" style="padding:0"><label class="wide">Cow / group name<input data-cow="${i}|name" value="${esc(c.name||'')}" placeholder="e.g. Pillai"></label><label>Last year total (L)<input data-cow="${i}|lastYear" inputmode="decimal" value="${c.lastYear??''}"></label><label>Milk rate ₹/L<input data-cow="${i}|rate" inputmode="decimal" value="${c.rate??50}"></label>${months.map((m,j)=>`<label>${m} milk (L)<input data-cow="${i}|m${j+1}" inputmode="decimal" value="${c['m'+(j+1)]??0}"></label>`).join('')}<label class="wide">Feeding cost ₹<input data-cow="${i}|feedingCost" inputmode="decimal" value="${c.feedingCost??0}"></label></div></div>`});
+ h+=`<div style="padding:10px"><button class="b" onclick="addCow()">+ Add cow / group</button></div></div>
+ <div class="card"><h3>Raw material purchases</h3><div class="muted" style="padding:10px 12px">Record feed and raw-material purchases in the Expenses tab using the “Cow feed” category. This keeps all dated purchases searchable in one place.</div></div>`;
+ $('#v-farm').innerHTML=h;
+}
+function addCow(){S.farm.cows.push({name:'',lastYear:0,rate:50,feedingCost:0});saveFarm();rFarm()}
+function rExpenses(){
+ const list=S.expenses||[],total=list.reduce((a,x)=>a+(+x.amount||0),0),paid=list.reduce((a,x)=>a+(+x.paid||0),0);
+ let h=`<div class="g2"><div><b>${money(total)||'₹0'}</b><span>Expenses this month</span></div><div><b>${money(paid)||'₹0'}</b><span>Paid</span></div><div><b>${money(total-paid)||'₹0'}</b><span>Unpaid</span></div><div><b>${list.length}</b><span>Entries</span></div></div>
+ <div class="card"><h3>Add expense / purchase / EMI</h3><div class="mobile-grid">
+ <input id="exdate" type="date" value="${S.ym}-01"><select id="excat"><option>Other</option><option>Cow feed</option><option>Needs</option><option>Extra</option><option>Medical</option><option>Transport</option><option>Loan / EMI</option><option>Utility</option></select>
+ <input id="exdesc" class="wide" placeholder="Description (e.g. maize, petrol, LIC) *"><input id="examount" inputmode="decimal" placeholder="Amount ₹"><input id="exparty" placeholder="Paid to / lender">
+ <input id="expayable" inputmode="decimal" placeholder="Loan payable ₹"><input id="expaid" inputmode="decimal" placeholder="Amount paid ₹"><input id="exemi" inputmode="decimal" placeholder="Monthly EMI ₹">
+ <button class="b wide" onclick="addExpense()">+ Save entry</button></div></div>
+ <div class="card"><h3>${list.length} entries · ${S.ym}</h3>`;
+ if(!list.length)h+='<div class="entry muted">No expenses recorded for this month yet.</div>';
+ list.forEach(x=>{h+=`<div class="entry"><div><strong>${esc(x.description)}</strong><small>${esc(x.date)} · ${esc(x.category)}${x.party?' · '+esc(x.party):''}</small><small>Loan ₹${num(x.payable).toLocaleString('en-IN')} · Paid ₹${num(x.paid).toLocaleString('en-IN')} · EMI ₹${num(x.emi).toLocaleString('en-IN')}</small></div><div style="text-align:right"><div class="amount">${money(x.amount)||'₹0'}</div><button class="b r" style="padding:5px 9px;margin-top:7px" onclick="removeExpense('${x._id}')">Delete</button></div></div>`});
+ h+='</div>';$('#v-expenses').innerHTML=h;
+}
+async function addExpense(){const description=$('#exdesc').value.trim();if(!description)return alert('Enter a description');try{await api('POST','/api/expenses',{month:S.ym,date:$('#exdate').value,category:$('#excat').value,description,amount:$('#examount').value,party:$('#exparty').value,payable:$('#expayable').value,paid:$('#expaid').value,emi:$('#exemi').value});S.expenses=await api('GET','/api/expenses/'+S.ym);rExpenses()}catch(e){alert(e.message)}}
+async function removeExpense(id){if(!confirm('Delete this entry?'))return;await api('DELETE','/api/expenses/'+id);S.expenses=await api('GET','/api/expenses/'+S.ym);rExpenses()}
+function rProfile(){
+ const fields=[['bizName','Business name'],['ownerName','Owner / contact person'],['phone','Phone / WhatsApp'],['email','Email'],['address','Business address'],['gstin','GSTIN'],['upiId','UPI ID']];
+ $('#v-profile').innerHTML=`<div class="card"><h3>Business profile</h3><div class="muted" style="padding:9px 12px">Complete these details once. They appear on your customer bills and remain saved for future months.</div><div class="mobile-grid">${fields.map(([k,l])=>`<label class="${k==='address'?'wide':''}" style="font-size:12px;color:var(--mut)">${l}<input data-set="${k}" value="${esc(S.set[k]||'')}" placeholder="${l}"></label>`).join('')}<label>Paneer rate ₹ / kg<input data-set="paneerRate" inputmode="decimal" value="${S.set.paneerRate??500}"></label></div></div>
+ <div class="card"><h3>Data & privacy</h3><div style="padding:12px" class="muted">Your register is stored in your MongoDB database. Use the month selector to switch billing periods. Export monthly customer data from Month Sheet → Download Excel (CSV).</div></div>`;
+}
+
+/* ---------- tabs & start ---------- */
+$$('nav button').forEach(b=>b.onclick=()=>{S.view=b.dataset.view;$$('nav button').forEach(x=>x.classList.toggle('on',x===b));
+ ['dash','staff','today','sheet','cust','farm','expenses','profile'].forEach(v=>$('#v-'+v).classList.toggle('hide',v!==S.view));render()});
+const now=new Date();$('#day').value=iso(now);
+load(iso(now).slice(0,7)).catch(e=>{stat('Cannot reach server: '+e.message,'bad')});
+</script></body></html>
