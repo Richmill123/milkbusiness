@@ -92,7 +92,7 @@ async function run(p){stat('Saving…');try{await p;stat('Saved ✓')}catch(e){s
 
 /* ---------- data ---------- */
 async function load(ym){if(hasPending()&&!confirm('There are unsaved changes. Discard them and switch month?'))return;const[d,st,ex,pr]=await Promise.all([api('GET','/api/month/'+ym),api('GET','/api/staff/'+ym),api('GET','/api/expenses/'+ym),api('GET','/api/production/'+ym)]);S.ym=ym;S.emp=st.employees;S.att=Object.fromEntries(st.att.map(a=>[a.eid,a]));S.cust=d.customers;S.by=Object.fromEntries(d.customers.map(c=>[c._id,c]));
- S.sh=Object.fromEntries(d.sheets.map(s=>[s.cid,s]));S.set=d.settings;S.expenses=ex.expenses||[];S.production=Object.fromEntries((pr.records||[]).map(x=>[x.day,x]));$('#mon').value=ym;
+ S.sh=Object.fromEntries(d.sheets.map(s=>[s.cid,s]));S.set=d.settings;S.expenses=ex.expenses||[];S.production=Object.fromEntries((pr.records||[]).map(x=>[x.date||x.day,x]));$('#mon').value=ym;
  $('#biz').textContent=S.set.bizName||'Milk Register';render()}
 const g=(id,d,f)=>{const v=S.sh[id]?.days?.[d]?.[f];return v!==undefined?v:(f==='m'?(Number(S.by[id]?.dailyMilkLitres)||0):undefined)};
 function calc(c){const s=S.sh[c._id]||{};let l=0,kg=0;for(let d=1;d<=dim();d++){l+=num(g(c._id,d,'m'))+num(g(c._id,d,'e'));kg+=num(g(c._id,d,'p'))}
@@ -189,13 +189,16 @@ function rTotals(){
 function rPaneer(){
  const date=$('#day').value||iso(new Date()),d=+date.slice(8),x=S.production[date]||{};
  $('#paneerBox').innerHTML=`<div class="bar"><label>Date <input type="date" id="paneerDate" value="${date}"></label></div>
+ <div class="card"><h3>Daily milk production</h3><div style="padding:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+ <label>Milk produced (litres)<input id="milkProduced" type="number" min="0" step="0.1" value="${x.milkProducedLitres??''}" placeholder="Enter litres" style="display:block;padding:9px;width:150px;border:1px solid var(--ln);border-radius:7px"></label>
+ </div></div>
  <div class="card"><h3>Daily paneer production</h3><div style="padding:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:end">
  <label>Milk used (litres)<input id="pMilk" type="number" min="0" step="0.1" value="${x.inputLitres??''}" placeholder="Enter litres" style="display:block;padding:9px;width:130px;border:1px solid var(--ln);border-radius:7px"></label>
  <label>Paneer produced (kg)<input id="pOut" type="number" min="0" step="0.01" value="${x.outputKg??''}" placeholder="Enter kg" style="display:block;padding:9px;width:130px;border:1px solid var(--ln);border-radius:7px"></label>
- <button class="b" id="saveProduction">Save production</button></div></div>
- <div class="g2"><div><b>${fmt(x.inputLitres)||0} L</b><span>Milk used</span></div><div><b>${fmt(x.outputKg)||0} kg</b><span>Paneer output</span></div><div><b>${x.inputLitres?((num(x.outputKg)/num(x.inputLitres))*1000).toFixed(1):'0'} g/L</b><span>Yield</span></div></div>`;
+ <button class="b" id="saveProduction">Save daily production</button></div></div>
+ <div class="g2"><div><b>${fmt(x.milkProducedLitres)||0} L</b><span>Milk produced</span></div><div><b>${fmt(x.inputLitres)||0} L</b><span>Milk used for paneer</span></div><div><b>${fmt(x.outputKg)||0} kg</b><span>Paneer output</span></div><div><b>${x.inputLitres?((num(x.outputKg)/num(x.inputLitres))*1000).toFixed(1):'0'} g/L</b><span>Paneer yield</span></div></div>`;
  $('#paneerDate').onchange=e=>{setDay(e.target.value);rPaneer()};
- $('#saveProduction').onclick=async()=>{try{await api('POST','/api/production',{month:S.ym,date,inputLitres:num($('#pMilk').value),outputKg:num($('#pOut').value)});S.production[date]={date,inputLitres:num($('#pMilk').value),outputKg:num($('#pOut').value)};rPaneer();rDash()}catch(e){alert(e.message)}};
+ $('#saveProduction').onclick=async()=>{try{const record={month:S.ym,date,milkProducedLitres:num($('#milkProduced').value),inputLitres:num($('#pMilk').value),outputKg:num($('#pOut').value)};await api('POST','/api/production',record);S.production[date]={...record};rPaneer();rDash()}catch(e){alert(e.message)}};
 }
 function rExpenses(){
  const total=S.expenses.reduce((a,x)=>a+num(x.amount),0);
@@ -266,11 +269,11 @@ function rDash(){const n=dim(),nowIso=iso(new Date()),D=nowIso.slice(0,7)===S.ym
  for(let d=1;d<=n;d++){let m=0,e=0;for(const c of S.cust){m+=num(g(c._id,d,'m'));e+=num(g(c._id,d,'e'))}daily.push([m,e])}
  const dm=daily[D-1]||[0,0];let dp=0;for(const c of S.cust)dp+=num(g(c._id,D,'p'));
  for(const c of S.cust){const k=calc(c);tm+=k.l;tp+=k.kg;milkAmt+=k.milk;panAmt+=k.pan;prev+=k.prev;paid+=k.paid;bal+=k.bal;byC.push([c,k])}
- const todayExpenses=S.expenses.filter(x=>x.date===nowIso).reduce((a,x)=>a+num(x.amount),0),monthExpenses=S.expenses.reduce((a,x)=>a+num(x.amount),0);let pres=0,half=0,absent=0,unm=0,payNet=0,payLeft=0;
+ const todayExpenses=S.expenses.filter(x=>x.date===nowIso).reduce((a,x)=>a+num(x.amount),0),monthExpenses=S.expenses.reduce((a,x)=>a+num(x.amount),0);\n const todayMilkProduced=num(S.production[nowIso]?.milkProducedLitres),monthMilkProduced=Object.values(S.production).reduce((a,x)=>a+num(x.milkProducedLitres),0);let pres=0,half=0,absent=0,unm=0,payNet=0,payLeft=0;
  for(const e of S.emp){const v=S.att[e._id]?.days?.[D],k=eCalc(e);if(v==='P')pres++;else if(v==='H')half++;else if(v==='A')absent++;else unm++;payNet+=k.net;payLeft+=k.left}
  const card=(v,l,c='')=>`<div class="${c}"><b>${v}</b><span>${l}</span></div>`;
  let h=`<div class="muted" style="margin-bottom:6px">Showing ${S.ym} · figures use every quantity entered in the month sheet (including days not yet delivered).</div>
- <div class="g2">${card(fmt(dm[0]+dm[1])||'0',lbl+' litres')}${card(fmt(dp)||'0',lbl+' paneer kg')}${card(fmt(tm)||'0','Month litres')}${card(fmt(tp)||'0','Month paneer kg')}
+ <div class="g2">${card(fmt(dm[0]+dm[1])||'0',lbl+' litres')}${card(fmt(dp)||'0',lbl+' paneer kg')}${card(fmt(todayMilkProduced)||'0',lbl+' milk produced')}${card(fmt(tm)||'0','Month litres supplied')}${card(fmt(tp)||'0','Month paneer kg')}${card(fmt(monthMilkProduced)||'0','Month milk produced')}
   ${card(money(milkAmt+panAmt)||'₹0','Billed this month')}${card(money(paid)||'₹0','Collected')}${card(money(bal)||'₹0','Outstanding','red')}${card(S.cust.length,'Customers')}${card(money(todayExpenses)||'₹0','Today expenses')}${card(money(monthExpenses)||'₹0','Month expenses')}${card(money(milkAmt+panAmt-monthExpenses)||'₹0','Net after expenses')}</div>
  <div class="g2">${card(`${pres+half} / ${S.emp.length}`,'Staff present '+lbl.split(' ')[0].toLowerCase())}${card(absent,'Staff absent')}${card(money(payNet)||'₹0','Payroll (net of advances)')}${card(money(payLeft)||'₹0','Salary still to pay','red')}</div>`;
  // chart
