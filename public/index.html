@@ -393,17 +393,38 @@ async function shareAllInvoices(){
    preparedShareFiles.push(new File([blob],invoiceFileName('png'),{type:'image/png'}));
   }
   $('#bill').classList.remove('hide');
-  $('#bill').innerHTML=`<div style="max-width:760px;margin:20px auto;padding:16px"><h2>All invoices are ready</h2><p>${preparedShareFiles.length} high-resolution PNG invoices prepared for ${esc(S.ym)}.</p><button class="b" id="shareAllPrepared">Tap to Share All Bills</button> <button class="b o" id="downloadAllPrepared">Download All PNGs</button><button class="b o" onclick="$('#bill').classList.add('hide')">Close</button></div>`;
+  $('#bill').innerHTML=`<div style="max-width:760px;margin:20px auto;padding:16px"><h2>All invoices are ready</h2><p>${preparedShareFiles.length} high-resolution PNG invoices prepared for ${esc(S.ym)}. Tap Share All Bills once to send the complete set in one share action.</p><button class="b" id="shareAllPrepared">Tap to Share All Bills</button> <button class="b o" id="downloadAllPrepared">Download All PNGs</button><button class="b o" onclick="$('#bill').classList.add('hide')">Close</button></div>`;
   $('#shareAllPrepared').onclick=shareAllPrepared;
   $('#downloadAllPrepared').onclick=downloadAllPrepared;
  }catch(e){alert('Could not prepare all invoices: '+e.message);$('#bill').classList.add('hide')}
 }
 function shareAllPrepared(){
  if(!preparedShareFiles.length)return alert('Please prepare invoices first.');
- if(navigator.canShare?.({files:preparedShareFiles})&&navigator.share){
-  const p=navigator.share({files:preparedShareFiles,title:`Milk invoices ${S.ym}`,text:`Monthly milk invoices for ${S.ym}`});
-  p.catch(e=>{if(e.name!=='AbortError')alert('Sharing failed: '+e.message)});
- }else downloadAllPrepared();
+
+ // IMPORTANT: call navigator.share synchronously from this button tap.
+ // Never await image rendering, a timer, or another promise before this call.
+ const shareData={
+  files:preparedShareFiles,
+  title:`Milk invoices ${S.ym}`,
+  text:`Monthly milk invoices for ${S.ym}`
+ };
+
+ if(!navigator.share || !navigator.canShare || !navigator.canShare({files:preparedShareFiles})){
+  downloadAllPrepared();
+  return;
+ }
+
+ try{
+  const sharePromise=navigator.share(shareData);
+  sharePromise.catch(err=>{
+   if(err.name==='AbortError')return;
+   // Some Android share targets reject a large batch. Keep the files ready
+   // and let the user explicitly retry or download them.
+   alert('Could not share all bills. Your invoices are still ready. Tap Share All Bills again, or use Download All PNGs.\n'+err.message);
+  });
+ }catch(err){
+  alert('Could not share all bills. Your invoices are still ready. Tap Share All Bills again, or use Download All PNGs.\n'+err.message);
+ }
 }
 function downloadAllPrepared(){
  preparedShareFiles.forEach(f=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),60000)});
