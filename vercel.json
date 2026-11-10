@@ -14,5 +14,11 @@
       "src": "/(.*)",
       "dest": "server.js"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/monthly-bills",
+      "schedule": "45 18 * * *"
+    }
   ]
 }

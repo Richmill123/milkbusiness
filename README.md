@@ -54,3 +54,20 @@ Every box you type in is saved to MongoDB automatically.
 6. Do not upload `.env` or put database credentials in frontend code.
 
 Employee management no longer asks for or displays Area / Route. Existing employee records may still contain an old `area` field in MongoDB; it is ignored by the updated interface.
+
+
+## Recent improvements
+
+- Invoice PNG rendering now uses a 4× capture scale for sharper downloads and sharing.
+- The Month Sheet includes **Share All Bills**. On supported phones, it creates customer-wise PNG files and opens the native share sheet with the files together. If multi-file sharing is unsupported, it downloads the PNGs for selecting together in WhatsApp.
+- Editable month-sheet cells, customer/employee fields, attendance, payroll fields and settings are staged locally. Use **Save All Changes** to commit pending edits together. The app warns before leaving a month with unsaved edits.
+- A Vercel Cron endpoint creates a database snapshot of each customer's previous-month bill on the first day of each month (Asia/Kolkata). It runs daily at 18:45 UTC and only performs work on the first local day. Snapshots are available at `/api/bills/YYYY-MM`.
+
+### Enable automatic monthly bill snapshots
+
+1. Deploy this project to Vercel with MongoDB configured as `MONGODB_URI`.
+2. Add a long random `CRON_SECRET` environment variable in Vercel. Vercel sends this as the Bearer authorization value to scheduled cron requests.
+3. Redeploy after adding the environment variable.
+4. Confirm the Vercel project has Cron Jobs enabled on its plan.
+
+The monthly job stores invoice data (totals and daily quantities) in MongoDB. It does **not** send WhatsApp messages or create phone-rendered PNG files in the background. Those actions require an app/device session; use **Share All Bills** when you open the app. WhatsApp unattended sending requires WhatsApp Business Platform/API access and is not included in this free workflow.

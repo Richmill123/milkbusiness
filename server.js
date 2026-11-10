@@ -9,7 +9,7 @@ const app = express();
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-let Cust, Sheet, Set, Emp, Att;
+let Cust, Sheet, Set, Emp, Att, Bills;
 
 // Ensure MongoDB is ready before any API route accesses a collection.
 app.use(async (req, res, next) => {
@@ -119,6 +119,56 @@ app.put('/api/settings', h(async (req) => {
   await Set.updateOne({ _id: 'main' }, { $set }, { upsert: true });
 }));
 
+
+// Monthly bill snapshots. Vercel Cron calls this once daily; it only creates
+// the previous month's invoices on the first day of the month (Asia/Kolkata).
+app.get('/api/cron/monthly-bills', h(async (req) => {
+  const secret = process.env.CRON_SECRET;
+  if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
+    throw new Error('Unauthorized cron request');
+  }
+  const now = new Date();
+  const local = new Date(now.getTime() + 330 * 60000);
+  if (local.getUTCDate() !== 1) return { ok: true, skipped: true, reason: 'Not the first day in Asia/Kolkata' };
+  let y = local.getUTCFullYear(), m = local.getUTCMonth(); m--;
+  if (m < 0) { m = 11; y--; }
+  const month = `${y}-${String(m + 1).padStart(2, '0')}`;
+  const [customers, sheets, settings] = await Promise.all([
+    Cust.find().sort({ order: 1 }).toArray(), Sheet.find({ month }).toArray(), Set.findOne({ _id: 'main' })
+  ]);
+  const bySheet = Object.fromEntries(sheets.map(x => [x.cid, x]));
+  const paneerRate = { ...DEF, ...(settings || {}) }.paneerRate;
+  const dayCount = new Date(y, m + 1, 0).getDate();
+  const docs = customers.map(c => {
+    const sh = bySheet[c._id] || { days: {} };
+    let litres = 0, paneerKg = 0;
+    const daily = [];
+    for (let d = 1; d <= dayCount; d++) {
+      const x = sh.days?.[d] || {}, milk = (Number(x.m) || 0) + (Number(x.e) || 0), paneer = Number(x.p) || 0;
+      litres += milk; paneerKg += paneer;
+      daily.push({ day: d, milkLitres: milk, paneerKg: paneer });
+    }
+    const milkAmount = litres * (sh.rate ?? c.rate ?? 0), paneerAmount = paneerKg * paneerRate;
+    const previous = Number(sh.prev) || 0, paid = Number(sh.paid) || 0;
+    const total = milkAmount + paneerAmount + previous;
+    return { month, cid: c._id, customerName: c.name, mobile: c.mobile || '', area: c.area || '',
+      invoiceNo: `${month.replace('-', '')}-${String(c._id).slice(0, 6).toUpperCase()}`,
+      milkRate: sh.rate ?? c.rate ?? 0, paneerRate, litres, paneerKg, milkAmount, paneerAmount,
+      previousBalance: previous, total, paid, balance: total - paid, daily,
+      businessName: { ...DEF, ...(settings || {}) }.bizName || 'Milk Register',
+      generatedAt: new Date() };
+  });
+  if (docs.length) await Bills.bulkWrite(docs.map(doc => ({
+    updateOne: { filter: { month: doc.month, cid: doc.cid }, update: { $set: doc }, upsert: true }
+  })), { ordered: false });
+  return { ok: true, month, generated: docs.length };
+}));
+
+app.get('/api/bills/:ym', h(async (req) => ({
+  month: req.params.ym,
+  bills: await Bills.find({ month: req.params.ym }).sort({ customerName: 1 }).toArray()
+})));
+
 // Copy last month's outstanding balance into this month's "previous balance"
 app.post('/api/carry', h(async (req) => {
   const month = req.body.month, pm = prevMonth(month);
@@ -146,6 +196,8 @@ async function ensureDatabase() {
       Cust = db.collection('customers');
       Sheet = db.collection('sheets');
       Set = db.collection('settings');
+      Bills = db.collection('monthly_bills');
+      await Bills.createIndex({ month: 1, cid: 1 }, { unique: true });
       await Sheet.createIndex({ month: 1, cid: 1 }, { unique: true });
       await Att.createIndex({ month: 1, eid: 1 }, { unique: true });
     }).catch(err => {
