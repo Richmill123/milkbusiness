@@ -32,29 +32,11 @@ function parse(path) {
     sheets.push({ month, cid: id, days, rate: n(row[97]) || 60, prev: n(row[99]) || 0, paid: n(row[102]) || 0,
       pdate: pd instanceof Date ? pd.toISOString().slice(0, 10) : '' });
   }
-  const farmRows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[2]], {header:1,defval:null,raw:true});
-  const cows=[];
-  for(let r=1;r<farmRows.length;r++){const row=farmRows[r],name=clean(row[0]);if(!name||/^(TOTAL|RATE|MILK AMOUNT|COW FEED)/i.test(name))continue;
-    if(row.slice(1,20).every(v=>v===null||v===''))continue;
-    cows.push({name,lastYear:n(row[1])||0,...Object.fromEntries(Array.from({length:12},(_,i)=>['m'+(i+1),n(row[i+2])||0])),rate:n(row[15])||50,feedingCost:n(row[17])||0});
-  }
-  const expRows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[3]],{header:1,defval:null,raw:true});
-  const rawDate=expRows[0]?.[0], expMonth=rawDate instanceof Date?`${rawDate.getFullYear()}-${String(rawDate.getMonth()+1).padStart(2,'0')}`:'2024-03';
-  const expenses=[];
-  for(let r=2;r<expRows.length;r++){const row=expRows[r],day=Number(row[0]);if(!day||day>31)continue;
-    const date=expMonth+'-'+String(day).padStart(2,'0');
-    for(const [nameCol,amountCol,category] of [[1,2,'Cow feed'],[3,4,'Needs'],[5,6,'Extra']]){
-      const description=clean(row[nameCol]);const amount=n(row[amountCol])||0;
-      if(description||amount)expenses.push({month:expMonth,date,category,description:description||category,amount,party:'',payable:0,paid:0,emi:0});
-    }
-    const party=clean(row[7]),payable=n(row[8])||0,paid=n(row[9])||0,emi=n(row[10])||0;
-    if(party||payable||paid||emi)expenses.push({month:expMonth,date,category:'Loan / EMI',description:party||'Monthly payable',amount:paid,party,payable,paid,emi});
-  }
-  return { month, customers, sheets, cows, farmYear:month.slice(0,4), expenses };
+  return { month, customers, sheets };
 }
 
 (async () => {
-  const { month, customers, sheets, cows, farmYear, expenses } = parse(file);
+  const { month, customers, sheets } = parse(file);
   const areas = [...new Set(customers.map(c => c.area))];
   console.log(`Month: ${month}\nAreas: ${areas.join(' | ')}\nCustomers: ${customers.length}`);
   let litres = 0, kg = 0;

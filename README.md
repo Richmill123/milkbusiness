@@ -14,7 +14,7 @@ Every box you type in is saved to MongoDB automatically.
    copy .env.example .env      (Mac/Linux: cp .env.example .env)
    ```
    Open `.env` and paste your connection string into MONGODB_URI.
-4. Load your existing Excel (customers, November quantities, farm production from Sheet 3, and expenses/EMI from Sheet 4):
+4. Load your existing Excel (customers + all November quantities):
    ```
    npm run import -- BM_MILK_NOVEMBER_2026.xlsx
    ```
@@ -44,11 +44,13 @@ Every box you type in is saved to MongoDB automatically.
 - `attendance`: one document per employee per month (days → P/H/A, advance, paid)
 - `settings`: paneer rate, business name
 
-## Additional registers (Sheets 3 & 4)
-- **Farm**: annual cow/group production register with last-year total, Jan–Dec milk, milk rate and feeding cost. Add a row for each cow or herd group; edits save automatically.
-- **Expenses**: dated cow-feed, needs, extra, medical, transport, utility and loan/EMI entries. Tracks amount, lender/payee, payable, paid and EMI with monthly totals.
-- **Profile**: business name, owner/contact, phone/WhatsApp, email, address, GSTIN, UPI ID and paneer rate. Profile details are saved and printed on customer bills.
-- The interface has mobile-first navigation and stacked forms; on the Month Sheet you can still scroll horizontally through the full Excel-style grid.
 
-## Security
-The supplied MongoDB connection string is intentionally not included in this package. Copy `.env.example` to `.env` and add your own connection string. Keep `.env` private and never share it.
+## Deploy to Vercel
+1. Push this folder to GitHub.
+2. Import the repository into Vercel. Set the project root to `milk-register` if the repository contains a parent folder.
+3. In Vercel → Settings → Environment Variables, add `MONGODB_URI` with your MongoDB Atlas connection string.
+4. In MongoDB Atlas → Network Access, allow connections from Vercel (for a quick test, `0.0.0.0/0`; use proper database credentials).
+5. Redeploy. The Express app is exported from `server.js` for Vercel's Node.js runtime.
+6. Do not upload `.env` or put database credentials in frontend code.
+
+Employee management no longer asks for or displays Area / Route. Existing employee records may still contain an old `area` field in MongoDB; it is ignored by the updated interface.

@@ -4,12 +4,13 @@ const crypto = require('crypto');
 const path = require('path');
 
 const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/milk');
+let dbReady = null;
 const app = express();
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-let Cust, Sheet, Set, Emp, Att, Farm, Expense;
-const DEF = { paneerRate: 500, bizName: '', ownerName:'', phone:'', address:'', email:'', gstin:'', upiId:'' };
+let Cust, Sheet, Set, Emp, Att;
+const DEF = { paneerRate: 500, bizName: '' };
 const h = fn => (req, res) => fn(req, res)
   .then(r => res.json(r ?? { ok: true }))
   .catch(e => { console.error(e); res.status(500).json({ error: e.message }); });
@@ -100,28 +101,9 @@ app.post('/api/attf', h(async (req) => {
   await Att.updateOne({ month, eid }, val === null ? { $unset: { [f]: '' } } : { $set: { [f]: val } }, { upsert: true });
 }));
 
-// Farm production register (one document per calendar year)
-app.get('/api/farm/:year', h(async req => (await Farm.findOne({ _id: String(req.params.year) })) || { _id:String(req.params.year), cows:[] }));
-app.put('/api/farm/:year', h(async req => {
-  const year=String(req.params.year); const cows=Array.isArray(req.body.cows)?req.body.cows:[];
-  await Farm.updateOne({_id:year},{$set:{cows,updatedAt:new Date()}},{upsert:true});
-}));
-app.get('/api/expenses/:ym', h(async req => Expense.find({month:req.params.ym}).sort({date:1,createdAt:1}).toArray()));
-app.post('/api/expenses', h(async req => {
-  const b=req.body; if(!b.month || !b.description || !/^[0-9]{4}-[0-9]{2}$/.test(b.month)) bad(0,'Month and description are required');
-  const doc={_id:crypto.randomUUID(),month:b.month,date:String(b.date||b.month+'-01'),category:String(b.category||'Other'),description:String(b.description).trim(),amount:Number(b.amount)||0,party:String(b.party||''),payable:Number(b.payable)||0,paid:Number(b.paid)||0,emi:Number(b.emi)||0,createdAt:new Date()};
-  await Expense.insertOne(doc); return doc;
-}));
-app.put('/api/expenses/:id', h(async req => {
-  const $set={}; for(const f of ['date','category','description','party']) if(f in req.body)$set[f]=String(req.body[f]);
-  for(const f of ['amount','payable','paid','emi']) if(f in req.body)$set[f]=Number(req.body[f])||0;
-  await Expense.updateOne({_id:req.params.id},{$set});
-}));
-app.delete('/api/expenses/:id', h(async req=>{await Expense.deleteOne({_id:req.params.id});}));
-
 app.put('/api/settings', h(async (req) => {
   const $set = {}; if ('paneerRate' in req.body) $set.paneerRate = Number(req.body.paneerRate) || 0;
-  for (const f of ['bizName','ownerName','phone','address','email','gstin','upiId']) if (f in req.body) $set[f] = String(req.body[f]);
+  if ('bizName' in req.body) $set.bizName = String(req.body.bizName);
   await Set.updateOne({ _id: 'main' }, { $set }, { upsert: true });
 }));
 
@@ -141,12 +123,41 @@ app.post('/api/carry', h(async (req) => {
   return { n: ops.length };
 }));
 
-(async () => {
-  await client.connect();
-  const db = client.db();
-  Emp = db.collection('employees'); Att = db.collection('attendance'); Farm=db.collection('farm'); Expense=db.collection('expenses'); Cust = db.collection('customers'); Sheet = db.collection('sheets'); Set = db.collection('settings');
-  await Sheet.createIndex({ month: 1, cid: 1 }, { unique: true });
-  await Att.createIndex({ month: 1, eid: 1 }, { unique: true });
+// Vercel runs this file as a serverless function. Export the Express app;
+// connect to MongoDB lazily and cache the connection across warm invocations.
+async function ensureDatabase() {
+  if (!dbReady) {
+    dbReady = client.connect().then(async () => {
+      const db = client.db();
+      Emp = db.collection('employees');
+      Att = db.collection('attendance');
+      Cust = db.collection('customers');
+      Sheet = db.collection('sheets');
+      Set = db.collection('settings');
+      await Sheet.createIndex({ month: 1, cid: 1 }, { unique: true });
+      await Att.createIndex({ month: 1, eid: 1 }, { unique: true });
+    }).catch(err => {
+      dbReady = null; // allow a later request to retry
+      throw err;
+    });
+  }
+  return dbReady;
+}
+
+app.use(async (req, res, next) => {
+  try {
+    await ensureDatabase();
+    next();
+  } catch (err) {
+    console.error('MongoDB connection failed:', err);
+    res.status(503).json({ error: 'Database connection failed. Check MONGODB_URI and MongoDB Atlas Network Access.' });
+  }
+});
+
+// Local development only. Vercel imports the exported app and manages the listener.
+if (!process.env.VERCEL) {
   const port = process.env.PORT || 3000;
   app.listen(port, () => console.log(`Milk register running → http://localhost:${port}`));
-})().catch(e => { console.error('Could not start. Is MongoDB reachable? Check MONGODB_URI in .env\n', e.message); process.exit(1); });
+}
+
+module.exports = app;

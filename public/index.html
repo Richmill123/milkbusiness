@@ -50,26 +50,9 @@ table.c{width:100%;border-collapse:collapse}.c td,.c th{padding:5px;border-botto
 #bill{position:fixed;inset:0;background:#fff;z-index:100;overflow:auto;padding:16px}.bill{max-width:760px;margin:0 auto;border:1px solid #888;padding:16px}
 .bill table{border-collapse:collapse;width:100%;margin:8px 0}.bill td,.bill th{border:1px solid #888;padding:3px;text-align:center;font-size:12px}
 @media print{body>*:not(#bill){display:none!important}#bill{position:static;padding:0}.noprint{display:none}.bill{border:0}}
-
-/* mobile-first additions */
-.mobile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px}
-.mobile-grid input,.mobile-grid select,.mobile-grid textarea{width:100%;min-width:0;padding:10px;border:1.5px solid var(--ln);border-radius:8px;font:inherit;background:#fff}
-.mobile-grid .wide{grid-column:1/-1}
-.entry{padding:12px;border-bottom:1px solid #eef1f3;display:grid;grid-template-columns:1fr auto;gap:5px;align-items:start}
-.entry small{display:block;color:var(--mut);font-size:12px}.entry strong{font-size:15px}.entry .amount{font-weight:800;color:var(--gd);white-space:nowrap}
-#v-farm .table-wrap,#v-expenses .table-wrap{overflow:auto}
-@media(max-width:650px){
- body{font-size:14px}header{gap:6px;padding:8px}header b{width:100%;font-size:16px}header input{width:100%}
- nav{top:0;overflow-x:auto;position:sticky}nav button{flex:0 0 auto;min-width:88px;padding:12px 9px;font-size:13px}
- main{padding:8px}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g2 b{font-size:18px}
- .cols{grid-template-columns:1fr}.bar>*{max-width:100%}.bar input[type=search],.bar input[type=date]{flex:1;min-width:130px}
- #sheetBox{max-height:calc(100dvh - 220px)}.s .nm{min-width:125px;max-width:125px}
- .mobile-grid{grid-template-columns:1fr 1fr}.mobile-grid .wide{grid-column:1/-1}
- .c input{min-width:100px}.card{border-radius:9px}
-}
 </style></head><body>
 <header><b id="biz">Milk Register</b><span id="stat"></span><input type="month" id="mon"></header>
-<nav><button data-view="dash" class="on">Dashboard</button><button data-view="today">Today</button><button data-view="sheet">Month Sheet</button><button data-view="staff">Employees</button><button data-view="cust">Customers</button><button data-view="farm">Farm</button><button data-view="expenses">Expenses</button><button data-view="profile">Profile</button></nav>
+<nav><button data-view="dash" class="on">Dashboard</button><button data-view="today">Today</button><button data-view="sheet">Month Sheet</button><button data-view="staff">Employees</button><button data-view="cust">Customers</button></nav>
 <main>
  <section id="v-dash"></section>
  <section id="v-staff" class="hide"></section>
@@ -84,7 +67,7 @@ table.c{width:100%;border-collapse:collapse}.c td,.c th{padding:5px;border-botto
    <span class="muted">M = morning litres · E = evening litres · P = paneer kg · tap a box and type · arrow keys / Enter move around</span></div>
   <div id="sheetBox"></div>
  </section>
- <section id="v-cust" class="hide"><div id="custBox"></div></section><section id="v-farm" class="hide"></section><section id="v-expenses" class="hide"></section><section id="v-profile" class="hide"></section>
+ <section id="v-cust" class="hide"><div id="custBox"></div></section>
 </main>
 <div id="bill" class="hide"></div>
 <script>
@@ -93,7 +76,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&
 const fmt=n=>n?String(Math.round(n*1000)/1000):'';
 const money=n=>n?'₹'+n.toLocaleString('en-IN',{maximumFractionDigits:2}):'';
 const num=v=>+v||0, pad=n=>String(n).padStart(2,'0');
-const S={ym:'',view:'dash',emp:[],att:{},cust:[],by:{},sh:{},set:{paneerRate:500,bizName:''},areas:[],farm:{cows:[]},expenses:[]};
+const S={ym:'',view:'dash',emp:[],att:{},cust:[],by:{},sh:{},set:{paneerRate:500,bizName:''},areas:[]};
 const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const dim=()=>{const[y,m]=S.ym.split('-');return new Date(y,m,0).getDate()};
 const DOW=['S','M','T','W','T','F','S'];
@@ -104,8 +87,8 @@ function stat(t,c){const s=$('#stat');s.textContent=t;s.className=c||''}
 async function run(p){stat('Saving…');try{await p;stat('Saved ✓')}catch(e){stat('NOT SAVED: '+e.message,'bad');alert('Could not save: '+e.message)}}
 
 /* ---------- data ---------- */
-async function load(ym){await flush();const[d,st,fa,ex]=await Promise.all([api('GET','/api/month/'+ym),api('GET','/api/staff/'+ym),api('GET','/api/farm/'+ym.slice(0,4)),api('GET','/api/expenses/'+ym)]);S.ym=ym;S.emp=st.employees;S.att=Object.fromEntries(st.att.map(a=>[a.eid,a]));S.cust=d.customers;S.by=Object.fromEntries(d.customers.map(c=>[c._id,c]));
- S.sh=Object.fromEntries(d.sheets.map(s=>[s.cid,s]));S.set=d.settings;S.farm=fa;S.expenses=ex;$('#mon').value=ym;
+async function load(ym){await flush();const[d,st]=await Promise.all([api('GET','/api/month/'+ym),api('GET','/api/staff/'+ym)]);S.ym=ym;S.emp=st.employees;S.att=Object.fromEntries(st.att.map(a=>[a.eid,a]));S.cust=d.customers;S.by=Object.fromEntries(d.customers.map(c=>[c._id,c]));
+ S.sh=Object.fromEntries(d.sheets.map(s=>[s.cid,s]));S.set=d.settings;$('#mon').value=ym;
  $('#biz').textContent=S.set.bizName||'Milk Register';render()}
 const g=(id,d,f)=>S.sh[id]?.days?.[d]?.[f];
 function calc(c){const s=S.sh[c._id]||{};let l=0,kg=0;for(const d in s.days||{}){const x=s.days[d];l+=num(x.m)+num(x.e);kg+=num(x.p)}
@@ -137,7 +120,6 @@ document.addEventListener('change',e=>{const i=e.target;
  else if(i.dataset.s){const[id,f]=i.dataset.s.split('|');field(id,f,i.value.trim());refresh()}
  else if(i.dataset.c){const[id,f]=i.dataset.c.split('|'),c=S.by[id];c[f]=f==='rate'?+i.value||0:i.value.trim();run(api('PUT','/api/customers/'+id,{[f]:c[f]}))}
  else if(i.dataset.e){const[id,f]=i.dataset.e.split('|'),e=S.emp.find(x=>x._id===id);e[f]=f==='salary'?+i.value||0:i.value.trim();run(api('PUT','/api/employees/'+id,{[f]:e[f]}));rStaff()}
- else if(i.dataset.cow){const [idx,f]=i.dataset.cow.split('|');S.farm.cows[+idx][f]=f==='name'?i.value:(+i.value||0);saveFarm()}
  else if(i.dataset.af){const[id,f]=i.dataset.af.split('|'),a=attOf(id);if(i.value.trim()===''||isNaN(i.value))delete a[f];else a[f]=+i.value;run(api('POST','/api/attf',{month:S.ym,eid:id,f,v:i.value.trim()}));rStaff()}
  else if(i.dataset.set){S.set[i.dataset.set]=i.dataset.set==='paneerRate'?+i.value||0:i.value;$('#biz').textContent=S.set.bizName||'Milk Register';run(api('PUT','/api/settings',{[i.dataset.set]:S.set[i.dataset.set]}));refresh()}});
 document.addEventListener('keydown',e=>{const i=e.target;if(i.tagName!=='INPUT'||i.dataset.r==null)return;let r=+i.dataset.r,x=+i.dataset.x;
@@ -147,7 +129,7 @@ document.addEventListener('focusin',e=>{if(e.target.dataset?.r!=null)e.target.se
 
 /* ---------- views ---------- */
 const inp=(c,d,f,r,x)=>{const v=g(c._id,d,f);return`<input class="i${v!=null?' has':''}" inputmode="decimal" data-k="${c._id}|${d}|${f}" data-r="${r}" data-x="${x}" value="${v??''}">`};
-function render(){({dash:rDash,staff:rStaff,today:rToday,sheet:rSheet,cust:rCust,farm:rFarm,expenses:rExpenses,profile:rProfile})[S.view]();refresh()}
+function render(){({dash:rDash,staff:rStaff,today:rToday,sheet:rSheet,cust:rCust})[S.view]();refresh()}
 function rToday(){const D=+$('#day').value.slice(8);let h='',r=0;
  if(!S.cust.length)h='<div class="card"><div class="tr muted">No customers yet. Open the Customers tab to add some.</div></div>';
  for(const[a,list]of groups()){h+=`<div class="card"><div class="ah"><span>${esc(a)}</span><span>${list.length} customers</span></div>`;
@@ -183,7 +165,7 @@ function rCust(){const areas=[...new Set(S.cust.map(c=>c.area).filter(Boolean))]
  <div class="card"><h3>Settings</h3><div style="padding:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
   <label class="muted">Business name <input data-set="bizName" value="${esc(S.set.bizName)}" style="padding:8px;border:1.5px solid var(--ln);border-radius:7px"></label>
   <label class="muted">Paneer rate ₹/kg <input data-set="paneerRate" value="${S.set.paneerRate}" inputmode="decimal" style="width:80px;padding:8px;border:1.5px solid var(--ln);border-radius:7px"></label></div></div>
- <div class="card"><h3>${S.cust.length} customers</h3><div style="overflow:auto"><table class="c"><tr><th>Name</th><th>Mobile</th><th>Area</th><th>Rate ₹/L</th><th></th></tr>`;
+ <div class="card"><h3>${S.cust.length} customers</h3><div style="overflow:auto"><table class="c"><tr><th>Name</th><th>Mobile</th><th>Rate ₹/L</th><th></th></tr>`;
  for(const c of S.cust)h+=`<tr><td><input data-c="${c._id}|name" value="${esc(c.name)}"></td><td><input data-c="${c._id}|mobile" value="${esc(c.mobile)}" inputmode="tel"></td><td><input data-c="${c._id}|area" list="al" value="${esc(c.area)}"></td><td><input data-c="${c._id}|rate" value="${c.rate}" inputmode="decimal" style="width:70px"></td><td><button class="b r" onclick="delCust('${c._id}')">Delete</button></td></tr>`;
  $('#custBox').innerHTML=h+'</table></div></div>'}
 async function addCust(){const name=$('#na').value.trim();if(!name)return alert('Please type the customer name');
@@ -245,7 +227,7 @@ function rDash(){const n=dim(),nowIso=iso(new Date()),D=nowIso.slice(0,7)===S.ym
  svg+=`<text x="2" y="10" font-size="10" fill="#667">${fmt(mx)} L</text></svg>`;
  h+=`<div class="card"><h3>Litres per day <span style="text-transform:none;font-weight:400;color:var(--mut)">— <span style="color:#0f6b4f">■</span> morning <span style="color:#e8a33d">■</span> evening</span></h3><div style="padding:10px">${svg}</div></div><div class="cols">`;
  // areas
- h+='<div class="card"><h3>By area</h3><div style="overflow:auto"><table class="k"><tr><th>Area</th><th>Cust</th><th>Litres</th><th>Billed</th><th>Due</th></tr>';
+ h+='<div class="card"><h3>By area</h3><div style="overflow:auto"><table class="k"><tr><th>Cust</th><th>Litres</th><th>Billed</th><th>Due</th></tr>';
  for(const[a,list]of groups()){let l=0,b=0,o=0;for(const c of list){const k=calc(c);l+=k.l;b+=k.milk+k.pan;o+=k.bal}h+=`<tr><td>${esc(a)}</td><td>${list.length}</td><td>${fmt(l)}</td><td>${money(b)}</td><td style="color:var(--bad);font-weight:700">${money(o)}</td></tr>`}
  h+='</table></div></div>';
  // top due
@@ -273,7 +255,7 @@ function bill(id){const c=S.by[id],k=calc(c),n=dim(),s=S.sh[id]||{days:{}};let r
  for(let a=1;a<=n;a+=8){let r1='',r2='';for(let d=a;d<a+8;d++){r1+=`<th>${d<=n?d:''}</th>`;const x=s.days[d]||{};r2+=`<td>${d<=n?(fmt(num(x.m)+num(x.e))||'–')+(x.p?` <small>+${x.p}kg P</small>`:''):''}</td>`}rows+=`<tr>${r1}</tr><tr>${r2}</tr>`}
  $('#bill').innerHTML=`<div class="noprint" style="margin-bottom:10px"><button class="b" onclick="print()">Print / Save PDF</button> <button class="b o" onclick="$('#bill').classList.add('hide')">Close</button></div>
  <div class="bill"><h2 style="text-align:center;margin:0">${esc(S.set.bizName||'Milk Supply')}</h2><p style="text-align:center;margin:2px 0 10px"><b>MONTHLY BILL – ${S.ym}</b></p>
- <p>${S.set.ownerName?`<b>${esc(S.set.ownerName)}</b> · `:''}${esc(S.set.address||'')}${S.set.phone?' · '+esc(S.set.phone):''}${S.set.gstin?` · GSTIN ${esc(S.set.gstin)}`:''}</p><p><b>${esc(c.name)}</b> ${c.mobile?'· '+esc(c.mobile):''} · ${esc(c.area)}</p><table>${rows}</table><p class="muted">Litres per day (morning + evening). “–” = no delivery.</p>
+ <p><b>${esc(c.name)}</b> ${c.mobile?'· '+esc(c.mobile):''} · ${esc(c.area)}</p><table>${rows}</table><p class="muted">Litres per day (morning + evening). “–” = no delivery.</p>
  <table style="text-align:left"><tr><td>Total milk</td><td>${fmt(k.l)} L × ₹${k.rate}</td><td>${money(k.milk)||'₹0'}</td></tr>
  ${k.kg?`<tr><td>Paneer</td><td>${fmt(k.kg)} kg × ₹${S.set.paneerRate}</td><td>${money(k.pan)}</td></tr>`:''}
  <tr><td>Previous balance</td><td></td><td>${money(k.prev)||'₹0'}</td></tr><tr><td>Paid</td><td></td><td>${money(k.paid)||'₹0'}</td></tr>
@@ -283,42 +265,9 @@ function csv(){const n=dim(),H=['Area','Name','Mobile'];for(let d=1;d<=n;d++)H.p
  const t='\ufeff'+R.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n'),a=document.createElement('a');
  a.href=URL.createObjectURL(new Blob([t],{type:'text/csv'}));a.download=`milk-${S.ym}.csv`;a.click()}
 
-
-/* ---------- farm, expenses & business profile ---------- */
-const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-async function saveFarm(){try{await api('PUT','/api/farm/'+S.ym.slice(0,4),{cows:S.farm.cows});stat('Farm data saved ✓')}catch(e){stat('Farm save failed: '+e.message,'bad')}}
-function rFarm(){
- const cows=S.farm.cows||[];let h=`<div class="card"><h3>Farm production · ${S.ym.slice(0,4)}</h3><div class="muted" style="padding:9px 12px">Monthly milk production by cow or herd group. Tap a value to edit; changes save automatically.</div>`;
- cows.forEach((c,i)=>{h+=`<div style="padding:12px;border-bottom:1px solid #eef1f3"><div class="mobile-grid" style="padding:0"><label class="wide">Cow / group name<input data-cow="${i}|name" value="${esc(c.name||'')}" placeholder="e.g. Pillai"></label><label>Last year total (L)<input data-cow="${i}|lastYear" inputmode="decimal" value="${c.lastYear??''}"></label><label>Milk rate ₹/L<input data-cow="${i}|rate" inputmode="decimal" value="${c.rate??50}"></label>${months.map((m,j)=>`<label>${m} milk (L)<input data-cow="${i}|m${j+1}" inputmode="decimal" value="${c['m'+(j+1)]??0}"></label>`).join('')}<label class="wide">Feeding cost ₹<input data-cow="${i}|feedingCost" inputmode="decimal" value="${c.feedingCost??0}"></label></div></div>`});
- h+=`<div style="padding:10px"><button class="b" onclick="addCow()">+ Add cow / group</button></div></div>
- <div class="card"><h3>Raw material purchases</h3><div class="muted" style="padding:10px 12px">Record feed and raw-material purchases in the Expenses tab using the “Cow feed” category. This keeps all dated purchases searchable in one place.</div></div>`;
- $('#v-farm').innerHTML=h;
-}
-function addCow(){S.farm.cows.push({name:'',lastYear:0,rate:50,feedingCost:0});saveFarm();rFarm()}
-function rExpenses(){
- const list=S.expenses||[],total=list.reduce((a,x)=>a+(+x.amount||0),0),paid=list.reduce((a,x)=>a+(+x.paid||0),0);
- let h=`<div class="g2"><div><b>${money(total)||'₹0'}</b><span>Expenses this month</span></div><div><b>${money(paid)||'₹0'}</b><span>Paid</span></div><div><b>${money(total-paid)||'₹0'}</b><span>Unpaid</span></div><div><b>${list.length}</b><span>Entries</span></div></div>
- <div class="card"><h3>Add expense / purchase / EMI</h3><div class="mobile-grid">
- <input id="exdate" type="date" value="${S.ym}-01"><select id="excat"><option>Other</option><option>Cow feed</option><option>Needs</option><option>Extra</option><option>Medical</option><option>Transport</option><option>Loan / EMI</option><option>Utility</option></select>
- <input id="exdesc" class="wide" placeholder="Description (e.g. maize, petrol, LIC) *"><input id="examount" inputmode="decimal" placeholder="Amount ₹"><input id="exparty" placeholder="Paid to / lender">
- <input id="expayable" inputmode="decimal" placeholder="Loan payable ₹"><input id="expaid" inputmode="decimal" placeholder="Amount paid ₹"><input id="exemi" inputmode="decimal" placeholder="Monthly EMI ₹">
- <button class="b wide" onclick="addExpense()">+ Save entry</button></div></div>
- <div class="card"><h3>${list.length} entries · ${S.ym}</h3>`;
- if(!list.length)h+='<div class="entry muted">No expenses recorded for this month yet.</div>';
- list.forEach(x=>{h+=`<div class="entry"><div><strong>${esc(x.description)}</strong><small>${esc(x.date)} · ${esc(x.category)}${x.party?' · '+esc(x.party):''}</small><small>Loan ₹${num(x.payable).toLocaleString('en-IN')} · Paid ₹${num(x.paid).toLocaleString('en-IN')} · EMI ₹${num(x.emi).toLocaleString('en-IN')}</small></div><div style="text-align:right"><div class="amount">${money(x.amount)||'₹0'}</div><button class="b r" style="padding:5px 9px;margin-top:7px" onclick="removeExpense('${x._id}')">Delete</button></div></div>`});
- h+='</div>';$('#v-expenses').innerHTML=h;
-}
-async function addExpense(){const description=$('#exdesc').value.trim();if(!description)return alert('Enter a description');try{await api('POST','/api/expenses',{month:S.ym,date:$('#exdate').value,category:$('#excat').value,description,amount:$('#examount').value,party:$('#exparty').value,payable:$('#expayable').value,paid:$('#expaid').value,emi:$('#exemi').value});S.expenses=await api('GET','/api/expenses/'+S.ym);rExpenses()}catch(e){alert(e.message)}}
-async function removeExpense(id){if(!confirm('Delete this entry?'))return;await api('DELETE','/api/expenses/'+id);S.expenses=await api('GET','/api/expenses/'+S.ym);rExpenses()}
-function rProfile(){
- const fields=[['bizName','Business name'],['ownerName','Owner / contact person'],['phone','Phone / WhatsApp'],['email','Email'],['address','Business address'],['gstin','GSTIN'],['upiId','UPI ID']];
- $('#v-profile').innerHTML=`<div class="card"><h3>Business profile</h3><div class="muted" style="padding:9px 12px">Complete these details once. They appear on your customer bills and remain saved for future months.</div><div class="mobile-grid">${fields.map(([k,l])=>`<label class="${k==='address'?'wide':''}" style="font-size:12px;color:var(--mut)">${l}<input data-set="${k}" value="${esc(S.set[k]||'')}" placeholder="${l}"></label>`).join('')}<label>Paneer rate ₹ / kg<input data-set="paneerRate" inputmode="decimal" value="${S.set.paneerRate??500}"></label></div></div>
- <div class="card"><h3>Data & privacy</h3><div style="padding:12px" class="muted">Your register is stored in your MongoDB database. Use the month selector to switch billing periods. Export monthly customer data from Month Sheet → Download Excel (CSV).</div></div>`;
-}
-
 /* ---------- tabs & start ---------- */
 $$('nav button').forEach(b=>b.onclick=()=>{S.view=b.dataset.view;$$('nav button').forEach(x=>x.classList.toggle('on',x===b));
- ['dash','staff','today','sheet','cust','farm','expenses','profile'].forEach(v=>$('#v-'+v).classList.toggle('hide',v!==S.view));render()});
+ ['dash','staff','today','sheet','cust'].forEach(v=>$('#v-'+v).classList.toggle('hide',v!==S.view));render()});
 const now=new Date();$('#day').value=iso(now);
 load(iso(now).slice(0,7)).catch(e=>{stat('Cannot reach server: '+e.message,'bad')});
 </script></body></html>
