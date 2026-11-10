@@ -9,7 +9,7 @@ const app = express();
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-let Cust, Sheet, Set, Emp, Att, Bills;
+let Cust, Sheet, Set, Emp, Att, Bills, Expense, Production;
 
 // Ensure MongoDB is ready before any API route accesses a collection.
 app.use(async (req, res, next) => {
@@ -65,12 +65,14 @@ app.post('/api/customers', h(async (req) => {
   const b = req.body; if (!String(b.name || '').trim()) bad(0, 'Name is required');
   const last = await Cust.find().sort({ order: -1 }).limit(1).toArray();
   const doc = { _id: crypto.randomUUID(), name: b.name.trim(), mobile: b.mobile || '', area: (b.area || '').trim(),
-    rate: Number(b.rate) || 60, dailyMilkLitres: Math.max(0, Number(b.dailyMilkLitres) || 0), order: (last[0]?.order || 0) + 1 };
+    rate: Number(b.rate) || 60, morningLitres: Math.max(0, Number(b.morningLitres ?? b.dailyMilkLitres) || 0), eveningLitres: Math.max(0, Number(b.eveningLitres) || 0), dailyMilkLitres: Math.max(0, Number(b.morningLitres ?? b.dailyMilkLitres) || 0), order: (last[0]?.order || 0) + 1 };
   await Cust.insertOne(doc); return doc;
 }));
 app.put('/api/customers/:id', h(async (req) => {
   const $set = {}; for (const f of ['name', 'mobile', 'area']) if (f in req.body) $set[f] = String(req.body[f]).trim();
   if ('dailyMilkLitres' in req.body) $set.dailyMilkLitres = Math.max(0, Number(req.body.dailyMilkLitres) || 0);
+  if ('morningLitres' in req.body) { $set.morningLitres = Math.max(0, Number(req.body.morningLitres) || 0); $set.dailyMilkLitres = $set.morningLitres; }
+  if ('eveningLitres' in req.body) $set.eveningLitres = Math.max(0, Number(req.body.eveningLitres) || 0);
   if ('rate' in req.body) $set.rate = Number(req.body.rate) || 0;
   await Cust.updateOne({ _id: req.params.id }, { $set });
 }));
@@ -121,6 +123,30 @@ app.put('/api/settings', h(async (req) => {
 }));
 
 
+// Daily paneer production records (one record per date).
+app.get('/api/production/:ym', h(async req => ({
+  records: await Production.find({ month: req.params.ym }).toArray()
+})));
+app.post('/api/production', h(async req => {
+  const { month, date, inputLitres, outputKg } = req.body;
+  if (!/^\d{4}-\d\d$/.test(month) || !/^\d{4}-\d\d-\d\d$/.test(date) || date.slice(0,7) !== month) bad(0, 'bad production date');
+  const doc = { month, date, inputLitres: Math.max(0, Number(inputLitres)||0), outputKg: Math.max(0, Number(outputKg)||0), updatedAt: new Date() };
+  await Production.updateOne({ month, date }, { $set: doc }, { upsert: true });
+  return doc;
+}));
+
+// Monthly operating expenses.
+app.get('/api/expenses/:ym', h(async req => ({
+  expenses: await Expense.find({ month: req.params.ym }).sort({ date: -1 }).toArray()
+})));
+app.post('/api/expenses', h(async req => {
+  const { month, date, title, amount } = req.body;
+  if (!/^\d{4}-\d\d$/.test(month) || !/^\d{4}-\d\d-\d\d$/.test(date) || date.slice(0,7) !== month || !String(title||'').trim() || !(Number(amount)>0)) bad(0, 'invalid expense');
+  const doc = { _id: crypto.randomUUID(), month, date, title: String(title).trim(), amount: Number(amount), createdAt: new Date() };
+  await Expense.insertOne(doc); return doc;
+}));
+app.delete('/api/expenses/:id', h(async req => { await Expense.deleteOne({ _id: req.params.id }); }));
+
 // Monthly bill snapshots. Vercel Cron calls this once daily; it only creates
 // the previous month's invoices on the first day of the month (Asia/Kolkata).
 app.get('/api/cron/monthly-bills', h(async (req) => {
@@ -145,7 +171,7 @@ app.get('/api/cron/monthly-bills', h(async (req) => {
     let litres = 0, paneerKg = 0;
     const daily = [];
     for (let d = 1; d <= dayCount; d++) {
-      const x = sh.days?.[d] || {}, milk = (x.m !== undefined ? Number(x.m) || 0 : Number(c.dailyMilkLitres) || 0) + (Number(x.e) || 0), paneer = Number(x.p) || 0;
+      const x = sh.days?.[d] || {}, milk = (x.m !== undefined ? Number(x.m) || 0 : Number(c.morningLitres ?? c.dailyMilkLitres) || 0) + (x.e !== undefined ? Number(x.e)||0 : Number(c.eveningLitres ?? c.dailyMilkLitres)||0), paneer = Number(x.p) || 0;
       litres += milk; paneerKg += paneer;
       daily.push({ day: d, milkLitres: milk, paneerKg: paneer });
     }
@@ -198,6 +224,10 @@ async function ensureDatabase() {
       Sheet = db.collection('sheets');
       Set = db.collection('settings');
       Bills = db.collection('monthly_bills');
+      Expense = db.collection('expenses');
+      Production = db.collection('paneer_production');
+      await Expense.createIndex({ month: 1, date: -1 });
+      await Production.createIndex({ month: 1, date: 1 }, { unique: true });
       await Bills.createIndex({ month: 1, cid: 1 }, { unique: true });
       await Sheet.createIndex({ month: 1, cid: 1 }, { unique: true });
       await Att.createIndex({ month: 1, eid: 1 }, { unique: true });

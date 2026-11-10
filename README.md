@@ -33,7 +33,10 @@ Every box you type in is saved to MongoDB automatically.
 - **Today** tab: pick a date, type Morning / Evening / Paneer for each customer. "Copy yesterday" fills empty boxes.
 - **Month Sheet** tab: the full Excel-style grid. Arrow keys / Enter move between boxes. Search by name.
   Edit Rate, Prev bal, Paid and Paneer date on the right. "Bill" opens a detailed monthly customer invoice with date-wise milk and paneer quantities, daily amounts, previous balance, paid amount and balance. Download it as PDF or PNG image, print it, or share the image using your phone share menu / WhatsApp. PDF and image export use browser-loaded html2canvas and jsPDF libraries (internet connection required).
-- **Customers** tab: add / edit / delete customers, change paneer rate (₹500/kg) and business name.
+- **Customers** tab: add / edit / delete customers with separate default Morning and Evening litres, change paneer rate and business name.
+- **Daily Totals** tab: see morning, evening and combined customer litres for a selected day.
+- **Paneer** tab: record milk litres used and paneer kg produced each day; view yield.
+- **Expenses** tab: add and delete dated expenses. Dashboard shows today/month expenses and net after expenses.
 - **New month**: change the month at the top, then press "Carry last month's balance" on the Month Sheet.
 - **Download Excel (CSV)** exports the month.
 
@@ -43,6 +46,8 @@ Every box you type in is saved to MongoDB automatically.
 - `employees`: name, mobile, role, area, salary
 - `attendance`: one document per employee per month (days → P/H/A, advance, paid)
 - `settings`: paneer rate, business name
+- `expenses`: dated monthly expense entries
+- `paneer_production`: daily milk input and paneer output
 
 
 ## Deploy to Vercel
