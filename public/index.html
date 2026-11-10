@@ -269,7 +269,8 @@ function rDash(){const n=dim(),nowIso=iso(new Date()),D=nowIso.slice(0,7)===S.ym
  for(let d=1;d<=n;d++){let m=0,e=0;for(const c of S.cust){m+=num(g(c._id,d,'m'));e+=num(g(c._id,d,'e'))}daily.push([m,e])}
  const dm=daily[D-1]||[0,0];let dp=0;for(const c of S.cust)dp+=num(g(c._id,D,'p'));
  for(const c of S.cust){const k=calc(c);tm+=k.l;tp+=k.kg;milkAmt+=k.milk;panAmt+=k.pan;prev+=k.prev;paid+=k.paid;bal+=k.bal;byC.push([c,k])}
- const todayExpenses=S.expenses.filter(x=>x.date===nowIso).reduce((a,x)=>a+num(x.amount),0),monthExpenses=S.expenses.reduce((a,x)=>a+num(x.amount),0);\n const todayMilkProduced=num(S.production[nowIso]?.milkProducedLitres),monthMilkProduced=Object.values(S.production).reduce((a,x)=>a+num(x.milkProducedLitres),0);let pres=0,half=0,absent=0,unm=0,payNet=0,payLeft=0;
+ const todayExpenses=S.expenses.filter(x=>x.date===nowIso).reduce((a,x)=>a+num(x.amount),0),monthExpenses=S.expenses.reduce((a,x)=>a+num(x.amount),0);
+ const todayMilkProduced=num(S.production[nowIso]?.milkProducedLitres),monthMilkProduced=Object.values(S.production).reduce((a,x)=>a+num(x.milkProducedLitres),0);let pres=0,half=0,absent=0,unm=0,payNet=0,payLeft=0;
  for(const e of S.emp){const v=S.att[e._id]?.days?.[D],k=eCalc(e);if(v==='P')pres++;else if(v==='H')half++;else if(v==='A')absent++;else unm++;payNet+=k.net;payLeft+=k.left}
  const card=(v,l,c='')=>`<div class="${c}"><b>${v}</b><span>${l}</span></div>`;
  let h=`<div class="muted" style="margin-bottom:6px">Showing ${S.ym} · figures use every quantity entered in the month sheet (including days not yet delivered).</div>
