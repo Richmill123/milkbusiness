@@ -347,40 +347,67 @@ async function downloadInvoicePDF(){
   pdf.save(invoiceFileName('pdf'));
  }catch(e){alert('Could not create PDF: '+e.message)}
 }
+let preparedShareFile=null,preparedShareText='';
 async function shareInvoice(){
  try{
+  stat('Preparing high-resolution invoice…');
   const canvas=await invoiceCanvas();
   const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
   if(!blob)throw new Error('Could not prepare invoice image.');
-  const file=new File([blob],invoiceFileName('png'),{type:'image/png'});
+  preparedShareFile=new File([blob],invoiceFileName('png'),{type:'image/png'});
   const customer=S.by[currentInvoiceId],summary=customer?calc(customer):null;
-  const textMsg=`Monthly invoice for ${customer?.name||'customer'} – ${S.ym}. Total: ${money(summary?.due||0)}; paid: ${money(summary?.paid||0)}; balance: ${money(summary?.bal||0)}.`;
-  if(navigator.canShare?.({files:[file]})&&navigator.share){await navigator.share({files:[file],title:'Monthly milk invoice',text:textMsg})}
-  else{const a=document.createElement('a');a.download=file.name;a.href=URL.createObjectURL(blob);a.click();window.open('https://wa.me/?text='+encodeURIComponent(textMsg+' Please find the invoice image downloaded on your device.'),'_blank')}
- }catch(e){if(e.name!=='AbortError')alert('Could not share invoice: '+e.message)}
+  preparedShareText=`Monthly invoice for ${customer?.name||'customer'} – ${S.ym}. Total: ${money(summary?.due||0)}; paid: ${money(summary?.paid||0)}; balance: ${money(summary?.bal||0)}.`;
+  const bar=$('#bill .noprint');
+  let btn=$('#sharePrepared');
+  if(!btn){btn=document.createElement('button');btn.id='sharePrepared';btn.className='b';bar.appendChild(btn)}
+  btn.textContent='Tap to Share PNG';
+  btn.onclick=sharePreparedInvoice;
+  stat('Invoice ready to share ✓');
+ }catch(e){alert('Could not prepare invoice: '+e.message)}
+}
+function sharePreparedInvoice(){
+ if(!preparedShareFile)return alert('Please prepare the invoice first.');
+ // navigator.share is called directly during this fresh button tap (no await beforehand).
+ if(navigator.canShare?.({files:[preparedShareFile]})&&navigator.share){
+  const p=navigator.share({files:[preparedShareFile],title:'Monthly milk invoice',text:preparedShareText});
+  p.catch(e=>{if(e.name!=='AbortError')alert('Sharing failed: '+e.message)});
+ }else{
+  const a=document.createElement('a');a.download=preparedShareFile.name;a.href=URL.createObjectURL(preparedShareFile);a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),60000);
+  alert('PNG downloaded. Open WhatsApp and attach the downloaded invoice.');
+ }
 }
 
+let preparedShareFiles=[];
 async function shareAllInvoices(){
  if(!S.cust.length)return alert('No customers to invoice.');
  if(hasPending())return alert('Please tap Save All Changes before creating invoices.');
- if(!confirm(`Create ${S.cust.length} high-resolution PNG invoices for ${S.ym} and open the phone share menu?`))return;
- const files=[];
+ if(!confirm(`Create ${S.cust.length} high-resolution PNG invoices for ${S.ym}?`))return;
+ preparedShareFiles=[];
  try{
   for(const c of S.cust){
    bill(c._id);
    const canvas=await invoiceCanvas();
    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
    if(!blob)throw new Error('Could not render '+c.name);
-   files.push(new File([blob],invoiceFileName('png'),{type:'image/png'}));
+   preparedShareFiles.push(new File([blob],invoiceFileName('png'),{type:'image/png'}));
   }
-  if(navigator.canShare?.({files})&&navigator.share){
-   await navigator.share({files,title:`Milk invoices ${S.ym}`,text:`Monthly milk invoices for ${S.ym}`});
-  }else{
-   for(const f of files){const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;a.click();URL.revokeObjectURL(a.href)}
-   alert('Your high-resolution invoices were downloaded. Select them together in WhatsApp to share.');
-  }
- }catch(e){if(e.name!=='AbortError')alert('Could not prepare all invoices: '+e.message)}
- finally{$('#bill').classList.add('hide')}
+  $('#bill').classList.remove('hide');
+  $('#bill').innerHTML=`<div style="max-width:760px;margin:20px auto;padding:16px"><h2>All invoices are ready</h2><p>${preparedShareFiles.length} high-resolution PNG invoices prepared for ${esc(S.ym)}.</p><button class="b" id="shareAllPrepared">Tap to Share All Bills</button> <button class="b o" id="downloadAllPrepared">Download All PNGs</button><button class="b o" onclick="$('#bill').classList.add('hide')">Close</button></div>`;
+  $('#shareAllPrepared').onclick=shareAllPrepared;
+  $('#downloadAllPrepared').onclick=downloadAllPrepared;
+ }catch(e){alert('Could not prepare all invoices: '+e.message);$('#bill').classList.add('hide')}
+}
+function shareAllPrepared(){
+ if(!preparedShareFiles.length)return alert('Please prepare invoices first.');
+ if(navigator.canShare?.({files:preparedShareFiles})&&navigator.share){
+  const p=navigator.share({files:preparedShareFiles,title:`Milk invoices ${S.ym}`,text:`Monthly milk invoices for ${S.ym}`});
+  p.catch(e=>{if(e.name!=='AbortError')alert('Sharing failed: '+e.message)});
+ }else downloadAllPrepared();
+}
+function downloadAllPrepared(){
+ preparedShareFiles.forEach(f=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),60000)});
+ alert('All invoice PNGs downloaded. Select them together in WhatsApp.');
 }
 function csv(){const n=dim(),H=['Area','Name','Mobile'];for(let d=1;d<=n;d++)H.push(d+'/M',d+'/E',d+'/P');H.push('Litres','Rate','Milk Amount','Prev Balance','Paneer Amount','Total Due','Paid','Balance','Paneer Date');
  const R=[H];for(const c of S.cust){const k=calc(c),r=[c.area,c.name,c.mobile];for(let d=1;d<=n;d++)['m','e','p'].forEach(f=>r.push(g(c._id,d,f)??''));R.push(r.concat([k.l,k.rate,k.milk,k.prev,k.pan,k.due,k.paid,k.bal,k.pd]))}
