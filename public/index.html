@@ -286,7 +286,8 @@ function bill(id){
  $('#bill').innerHTML=`<div class="noprint" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 auto 12px;max-width:760px">
   <button class="b" onclick="downloadInvoicePDF()">Download PDF</button>
   <button class="b o" onclick="downloadInvoiceImage()">Download Image</button>
-  <button class="b o" onclick="shareInvoice()">Share</button>
+  <button class="b o" id="shareInvoiceBtn" onclick="sharePreparedInvoice()" disabled>Preparing share…</button>
+  <button class="b o" onclick="nextInvoice()">Next Bill →</button>
   <button class="b o" onclick="print()">Print</button>
   <button class="b o" onclick="$('#bill').classList.add('hide')">Close</button>
  </div>
@@ -312,6 +313,16 @@ function bill(id){
   <div class="bill-foot">Thank you for your business!</div>
  </div>`;
  $('#bill').classList.remove('hide');
+ // Prepare the image in advance. The actual Share API is called only on a fresh tap.
+ prepareInvoiceShare();
+}
+function nextInvoice(){
+ const idx=S.cust.findIndex(x=>String(x._id)===String(currentInvoiceId));
+ if(idx<0 || idx>=S.cust.length-1){
+  alert('This is the last bill.');
+  return;
+ }
+ bill(S.cust[idx+1]._id);
 }
 async function invoiceCanvas(){
  const el=$('#invoiceContent');
@@ -348,33 +359,42 @@ async function downloadInvoicePDF(){
  }catch(e){alert('Could not create PDF: '+e.message)}
 }
 let preparedShareFile=null,preparedShareText='';
-async function shareInvoice(){
+async function prepareInvoiceShare(){
+ const btn=$('#shareInvoiceBtn');
+ preparedShareFile=null;
+ if(btn){btn.disabled=true;btn.textContent='Preparing share…'}
  try{
-  stat('Preparing high-resolution invoice…');
   const canvas=await invoiceCanvas();
   const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
   if(!blob)throw new Error('Could not prepare invoice image.');
   preparedShareFile=new File([blob],invoiceFileName('png'),{type:'image/png'});
   const customer=S.by[currentInvoiceId],summary=customer?calc(customer):null;
   preparedShareText=`Monthly invoice for ${customer?.name||'customer'} – ${S.ym}. Total: ${money(summary?.due||0)}; paid: ${money(summary?.paid||0)}; balance: ${money(summary?.bal||0)}.`;
-  const bar=$('#bill .noprint');
-  let btn=$('#sharePrepared');
-  if(!btn){btn=document.createElement('button');btn.id='sharePrepared';btn.className='b';bar.appendChild(btn)}
-  btn.textContent='Tap to Share PNG';
-  btn.onclick=sharePreparedInvoice;
-  stat('Invoice ready to share ✓');
- }catch(e){alert('Could not prepare invoice: '+e.message)}
+  if(btn){btn.disabled=false;btn.textContent='Share Bill'}
+ }catch(e){
+  if(btn){btn.disabled=false;btn.textContent='Download Bill Image'}
+  if(btn)btn.onclick=downloadInvoiceImage;
+  console.error('Invoice share preparation failed:',e);
+ }
 }
 function sharePreparedInvoice(){
- if(!preparedShareFile)return alert('Please prepare the invoice first.');
- // navigator.share is called directly during this fresh button tap (no await beforehand).
- if(navigator.canShare?.({files:[preparedShareFile]})&&navigator.share){
+ if(!preparedShareFile){
+  alert('Invoice image is still preparing. Please wait a moment and tap Share Bill again.');
+  return;
+ }
+ if(!navigator.share || !navigator.canShare || !navigator.canShare({files:[preparedShareFile]})){
+  const a=document.createElement('a');
+  const url=URL.createObjectURL(preparedShareFile);
+  a.download=preparedShareFile.name;a.href=url;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+  alert('Your browser cannot share this image directly. The invoice image has been downloaded; attach it in WhatsApp.');
+  return;
+ }
+ try{
   const p=navigator.share({files:[preparedShareFile],title:'Monthly milk invoice',text:preparedShareText});
-  p.catch(e=>{if(e.name!=='AbortError')alert('Sharing failed: '+e.message)});
- }else{
-  const a=document.createElement('a');a.download=preparedShareFile.name;a.href=URL.createObjectURL(preparedShareFile);a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href),60000);
-  alert('PNG downloaded. Open WhatsApp and attach the downloaded invoice.');
+  p.catch(e=>{if(e.name!=='AbortError')alert('Sharing failed: '+e.message+'. You can use Download Image instead.')});
+ }catch(e){
+  alert('Sharing failed: '+e.message+'. You can use Download Image instead.');
  }
 }
 
