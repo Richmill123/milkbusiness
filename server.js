@@ -128,9 +128,11 @@ app.get('/api/production/:ym', h(async req => ({
   records: await Production.find({ month: req.params.ym }).toArray()
 })));
 app.post('/api/production', h(async req => {
-  const { month, date, milkProducedLitres, inputLitres, outputKg } = req.body;
+  const { month, date, milkProducedLitres, milkProducedMorningLitres, milkProducedEveningLitres, inputLitres, outputKg } = req.body;
   if (!/^\d{4}-\d\d$/.test(month) || !/^\d{4}-\d\d-\d\d$/.test(date) || date.slice(0,7) !== month) bad(0, 'bad production date');
-  const doc = { month, date, milkProducedLitres: Math.max(0, Number(milkProducedLitres)||0), inputLitres: Math.max(0, Number(inputLitres)||0), outputKg: Math.max(0, Number(outputKg)||0), updatedAt: new Date() };
+  const morning = Math.max(0, Number(milkProducedMorningLitres ?? milkProducedLitres) || 0);
+  const evening = Math.max(0, Number(milkProducedEveningLitres) || 0);
+  const doc = { month, date, milkProducedMorningLitres: morning, milkProducedEveningLitres: evening, milkProducedLitres: morning + evening, inputLitres: Math.max(0, Number(inputLitres)||0), outputKg: Math.max(0, Number(outputKg)||0), updatedAt: new Date() };
   await Production.updateOne({ month, date }, { $set: doc }, { upsert: true });
   return doc;
 }));

@@ -187,18 +187,32 @@ function rTotals(){
  $('#totDate').onchange=x=>{setDay(x.target.value);rTotals()};
 }
 function rPaneer(){
- const date=$('#day').value||iso(new Date()),d=+date.slice(8),x=S.production[date]||{};
+ const date=$('#day').value||iso(new Date()),x=S.production[date]||{};
+ const morning=num(x.milkProducedMorningLitres ?? x.milkProducedLitres), evening=num(x.milkProducedEveningLitres);
+ const deliveredMorning=S.cust.reduce((a,c)=>a+num(g(c._id,+date.slice(8),'m')),0);
+ const deliveredEvening=S.cust.reduce((a,c)=>a+num(g(c._id,+date.slice(8),'e')),0);
+ const delivered=deliveredMorning+deliveredEvening, produced=morning+evening;
+ const days=Array.from({length:dim()},(_,i)=>i+1).map(d=>{
+  const key=S.ym+'-'+pad(d),r=S.production[key]||{};
+  const am=num(r.milkProducedMorningLitres ?? r.milkProducedLitres),pm=num(r.milkProducedEveningLitres);
+  const dm=S.cust.reduce((a,c)=>a+num(g(c._id,d,'m')),0),de=S.cust.reduce((a,c)=>a+num(g(c._id,d,'e')),0);
+  return {date:key,am,pm,total:am+pm,delivered:dm+de,balance:am+pm-dm-de};
+ });
  $('#paneerBox').innerHTML=`<div class="bar"><label>Date <input type="date" id="paneerDate" value="${date}"></label></div>
- <div class="card"><h3>Daily milk production</h3><div style="padding:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:end">
- <label>Milk produced (litres)<input id="milkProduced" type="number" min="0" step="0.1" value="${x.milkProducedLitres??''}" placeholder="Enter litres" style="display:block;padding:9px;width:150px;border:1px solid var(--ln);border-radius:7px"></label>
- </div></div>
- <div class="card"><h3>Daily paneer production</h3><div style="padding:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+ <div class="card"><h3>Milk production</h3><div style="padding:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+ <label>Morning produced (L)<input id="milkProducedMorning" type="number" min="0" step="0.1" value="${morning||''}" placeholder="Morning litres" style="display:block;padding:9px;width:145px;border:1px solid var(--ln);border-radius:7px"></label>
+ <label>Evening produced (L)<input id="milkProducedEvening" type="number" min="0" step="0.1" value="${evening||''}" placeholder="Evening litres" style="display:block;padding:9px;width:145px;border:1px solid var(--ln);border-radius:7px"></label>
+ <button class="b" id="saveMilkProduction">Save milk production</button></div></div>
+ <div class="g2"><div><b>${fmt(morning)||0} L</b><span>Morning produced</span></div><div><b>${fmt(evening)||0} L</b><span>Evening produced</span></div><div><b>${fmt(produced)||0} L</b><span>Total produced</span></div><div><b>${fmt(delivered)||0} L</b><span>Total delivered</span></div><div><b>${fmt(produced-delivered)||0} L</b><span>Milk balance</span></div></div>
+ <div class="card"><h3>Paneer production</h3><div style="padding:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:end">
  <label>Milk used (litres)<input id="pMilk" type="number" min="0" step="0.1" value="${x.inputLitres??''}" placeholder="Enter litres" style="display:block;padding:9px;width:130px;border:1px solid var(--ln);border-radius:7px"></label>
  <label>Paneer produced (kg)<input id="pOut" type="number" min="0" step="0.01" value="${x.outputKg??''}" placeholder="Enter kg" style="display:block;padding:9px;width:130px;border:1px solid var(--ln);border-radius:7px"></label>
- <button class="b" id="saveProduction">Save daily production</button></div></div>
- <div class="g2"><div><b>${fmt(x.milkProducedLitres)||0} L</b><span>Milk produced</span></div><div><b>${fmt(x.inputLitres)||0} L</b><span>Milk used for paneer</span></div><div><b>${fmt(x.outputKg)||0} kg</b><span>Paneer output</span></div><div><b>${x.inputLitres?((num(x.outputKg)/num(x.inputLitres))*1000).toFixed(1):'0'} g/L</b><span>Paneer yield</span></div></div>`;
+ <button class="b" id="saveProduction">Save paneer production</button></div></div>
+ <div class="g2"><div><b>${fmt(x.inputLitres)||0} L</b><span>Milk used for paneer</span></div><div><b>${fmt(x.outputKg)||0} kg</b><span>Paneer output</span></div><div><b>${x.inputLitres?((num(x.outputKg)/num(x.inputLitres))*1000).toFixed(1):'0'} g/L</b><span>Paneer yield</span></div></div>
+ <div class="card"><h3>Milk production history — ${S.ym}</h3><div style="overflow:auto"><table class="k"><tr><th>Date</th><th>Morning produced (L)</th><th>Evening produced (L)</th><th>Total produced (L)</th><th>Milk delivered (L)</th><th>Balance (L)</th></tr>${days.map(r=>`<tr><td>${r.date}</td><td>${fmt(r.am)||0}</td><td>${fmt(r.pm)||0}</td><td><b>${fmt(r.total)||0}</b></td><td>${fmt(r.delivered)||0}</td><td><b>${fmt(r.balance)||0}</b></td></tr>`).join('')}<tr><th>Month total</th><th>${fmt(days.reduce((a,r)=>a+r.am,0))||0}</th><th>${fmt(days.reduce((a,r)=>a+r.pm,0))||0}</th><th>${fmt(days.reduce((a,r)=>a+r.total,0))||0}</th><th>${fmt(days.reduce((a,r)=>a+r.delivered,0))||0}</th><th>${fmt(days.reduce((a,r)=>a+r.balance,0))||0}</th></tr></table></div></div>`;
  $('#paneerDate').onchange=e=>{setDay(e.target.value);rPaneer()};
- $('#saveProduction').onclick=async()=>{try{const record={month:S.ym,date,milkProducedLitres:num($('#milkProduced').value),inputLitres:num($('#pMilk').value),outputKg:num($('#pOut').value)};await api('POST','/api/production',record);S.production[date]={...record};rPaneer();rDash()}catch(e){alert(e.message)}};
+ $('#saveMilkProduction').onclick=async()=>{try{const am=num($('#milkProducedMorning').value),pm=num($('#milkProducedEvening').value);const record={month:S.ym,date,milkProducedMorningLitres:am,milkProducedEveningLitres:pm,milkProducedLitres:am+pm,inputLitres:num(x.inputLitres),outputKg:num(x.outputKg)};await api('POST','/api/production',record);S.production[date]={...x,...record};rPaneer();rDash()}catch(e){alert(e.message)}};
+ $('#saveProduction').onclick=async()=>{try{const record={month:S.ym,date,milkProducedMorningLitres:morning,milkProducedEveningLitres:evening,milkProducedLitres:produced,inputLitres:num($('#pMilk').value),outputKg:num($('#pOut').value)};await api('POST','/api/production',record);S.production[date]={...x,...record};rPaneer();rDash()}catch(e){alert(e.message)}};
 }
 function rExpenses(){
  const total=S.expenses.reduce((a,x)=>a+num(x.amount),0);
