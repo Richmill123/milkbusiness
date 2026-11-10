@@ -10,6 +10,18 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 let Cust, Sheet, Set, Emp, Att;
+
+// Ensure MongoDB is ready before any API route accesses a collection.
+app.use(async (req, res, next) => {
+  try {
+    await ensureDatabase();
+    next();
+  } catch (err) {
+    console.error('MongoDB connection failed:', err);
+    res.status(503).json({ error: 'Database connection failed. Check MONGODB_URI and MongoDB Atlas Network Access.' });
+  }
+});
+
 const DEF = { paneerRate: 500, bizName: '' };
 const h = fn => (req, res) => fn(req, res)
   .then(r => res.json(r ?? { ok: true }))
@@ -143,16 +155,6 @@ async function ensureDatabase() {
   }
   return dbReady;
 }
-
-app.use(async (req, res, next) => {
-  try {
-    await ensureDatabase();
-    next();
-  } catch (err) {
-    console.error('MongoDB connection failed:', err);
-    res.status(503).json({ error: 'Database connection failed. Check MONGODB_URI and MongoDB Atlas Network Access.' });
-  }
-});
 
 // Local development only. Vercel imports the exported app and manages the listener.
 if (!process.env.VERCEL) {
